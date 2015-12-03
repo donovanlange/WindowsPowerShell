@@ -14,9 +14,9 @@ Param(
 	{
 		Write-Verbose "Running GitHub\shell.ps1"
 
-		if (Test-Path -Type Container "$env:LocalAppData\GitHub\PortableGit_c2ba306e536fdf878271f7fe636a147ff37326ad")
+		if (Test-Path -Type Container "$env:LocalAppData\GitHub\PortableGit_c7e0cbde92ba565cb218a521411d0e854079a28c")
 		{
-			$env:github_git = Resolve-Path "$env:LocalAppData\GitHub\PortableGit_c2ba306e536fdf878271f7fe636a147ff37326ad"
+			$env:github_git = Resolve-Path "$env:LocalAppData\GitHub\PortableGit_c7e0cbde92ba565cb218a521411d0e854079a28c"
 		}
 		else
 		{
@@ -31,11 +31,11 @@ Param(
 
 		# Setup PATH with the Git, GitHub, and msBuild tools
 		$pGitPath = $env:github_git
-		$env:Path = "$env:Path;$pGitPath\cmd;$pGitPath\bin;$pGitPath\mingw\bin"
+		$env:Path = "$env:Path;$pGitPath\cmd;$pGitPath\bin;$pGitPath\mingw\bin;$pGitPath\usr\bin"
 
-		if (Test-Path -Type Container "$env:LocalAppData\Apps\2.0\CPQE4QMB.8J3\DNL3QV1K.P41\gith..tion_317444273a93ac29_0002.000e_114545a4195e25d4")
+		if (Test-Path -Type Container "$env:LocalAppData\Apps\2.0\TL85DTYW.0WM\P59GNLLA.J5G\gith..tion_317444273a93ac29_0003.0000_f3a9f44c4e4f6514")
 		{
-			$appPath = Resolve-Path "$env:LocalAppData\Apps\2.0\CPQE4QMB.8J3\DNL3QV1K.P41\gith..tion_317444273a93ac29_0002.000e_114545a4195e25d4"
+			$appPath = Resolve-Path "$env:LocalAppData\Apps\2.0\TL85DTYW.0WM\P59GNLLA.J5G\gith..tion_317444273a93ac29_0003.0000_f3a9f44c4e4f6514"
 			$env:Path = "$env:Path;$appPath"
 		}
 
