@@ -17,6 +17,7 @@ if ($host.Name -eq 'ConsoleHost')
 # Git support
 Import-Module Git
 Initialize-Git
+Import-Module Posh-Git
 
 # Utils
 Import-Module JobControl
