@@ -22,7 +22,6 @@ Param()
  		$env:TMP = $env:TEMP = [system.io.path]::gettemppath().TrimEnd('\')
 
 		Import-Module Posh-Git
-		Enable-GitColors
 		Start-SshAgent -Quiet
 
 		# We prefer hub.exe to git.exe, if available
