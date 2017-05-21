@@ -19,6 +19,9 @@ Import-Module Git
 Initialize-Git
 Import-Module Posh-Git
 
+# Colorize directory output
+Import-Module PSColor
+
 # Utils
 Import-Module JobControl
 Import-Module StreamUtils
