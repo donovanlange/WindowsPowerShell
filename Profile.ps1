@@ -27,6 +27,11 @@ if ($host.Name -eq 'ConsoleHost')
 	Set-PSReadlineKeyHandler -Chord 'Shift+Tab' -Function "Complete"
 }
 
+# fzf is a fuzzy file finder, and will provide fuzzy location searching
+# when using Ctrl+T, and will provide better reverse command searching via
+# Ctrl-R.
+Import-Module PSFzf -ArgumentList 'Ctrl+T','Ctrl+R'
+
 # Git support
 Import-Module Git
 Initialize-Git
@@ -36,7 +41,6 @@ Import-Module Posh-Git
 Import-Module PSColor
 
 # Utils
-Import-Module JobControl
 Import-Module StreamUtils
 Import-Module StringUtils
 Import-Module Profile
@@ -80,9 +84,6 @@ function prompt
 	$path = [IO.Path]::GetFileName($path)
 	if(!$path) { $path = '\' }
 
-	# Check for completed background jobs:
-	Show-CompletedJobs
- 
 	if($NestedPromptLevel)
 	{
 		Write-Host -NoNewline -ForeGroundColor Green "$NestedPromptLevel-";
