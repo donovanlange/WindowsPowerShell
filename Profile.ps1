@@ -12,6 +12,19 @@ $FormatEnumerationLimit = 100
 if ($host.Name -eq 'ConsoleHost')
 {
 	Import-Module PSReadline
+
+	Set-PSReadLineOption -MaximumHistoryCount 4000
+	Set-PSReadlineOption -ShowToolTips:$true
+
+	# With these bindings, up arrow/down arrow will work like
+	# PowerShell/cmd if the current command line is blank. If you've
+	# entered some text though, it will search the history for commands
+	# that start with the currently entered text.
+	Set-PSReadlineKeyHandler -Key UpArrow -Function HistorySearchBackward
+	Set-PSReadlineKeyHandler -Key DownArrow -Function HistorySearchForward
+
+	Set-PSReadlineKeyHandler -Key "Tab" -Function "MenuComplete"
+	Set-PSReadlineKeyHandler -Chord 'Shift+Tab' -Function "Complete"
 }
 
 # Git support
