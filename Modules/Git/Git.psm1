@@ -7,7 +7,9 @@ Param()
 .DESCRIPTION
 	Sets up the proper PATH and ENV to use GitHub for Window's shell environment
 #>
-  if (!(Get-Command "git.exe" -ErrorAction SilentlyContinue))
+  if ((!(Get-Command "git.exe" -ErrorAction SilentlyContinue) -or
+       !(Get-Command "ssh.exe" -ErrorAction SilentlyContinue)) -and
+       (Test-Path "$env:LOCALAPPDATA\GitHub\shell.ps1"))
   {
     if ($env:github_shell -eq $null)
     {
