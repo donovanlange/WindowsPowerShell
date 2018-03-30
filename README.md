@@ -6,3 +6,6 @@ with background jobs, improved string & stream handling, and a metric ton of fan
 configuration -- that makes your machine fly?
 
 Clone WindowsPowerShell to your ~/Documents/ directory, and have at it!
+
+## Prerequisites
+- Install fzf using `choco install fzf`
