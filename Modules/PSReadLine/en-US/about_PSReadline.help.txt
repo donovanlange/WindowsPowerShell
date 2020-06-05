@@ -1,14 +1,14 @@
 TOPIC
-    about_PSReadline
+    about_PSReadLine
 
 SHORT DESCRIPTION
 
-    PSReadline provides an improved command line editing experience in
+    PSReadLine provides an improved command line editing experience in
     the PowerShell console.
 
 LONG DESCRIPTION
 
-    PSReadline provides a powerful command line editing experience for the
+    PSReadLine provides a powerful command line editing experience for the
     PowerShell console.  It provides:
 
       * Syntax coloring of the command line
@@ -23,464 +23,1102 @@ LONG DESCRIPTION
 
     The following functions are available in the class [Microsoft.PowerShell.PSConsoleReadLine]:
 
-  Cursor movement
-  ---------------
+  Basic editing functions
+  -----------------------
 
-    EndOfLine                (Cmd: <End>                Emacs: <End> or <Ctrl+E>)
+    Abort:
 
-        If the input has multiple lines, move to the end of the current line,
-        or if already at the end of the line, move to the end of the input.
-        If the input has a single line, move to the end of the input.
+      
 
-    BeginningOfLine          (Cmd: <Home>               Emacs: <Home> or <Ctrl+A>)
+      Emacs: <Ctrl+g>
 
-        If the input has multiple lines, move to the start of the current line,
-        or if already at the start of the line, move to the start of the input.
-        If the input has a single line, move to the start of the input.
+    AcceptAndGetNext:
 
-    NextLine                 (Cmd: unbound              Emacs: unbound)
+      
 
-        Move the cursor to the next line if the input has multiple lines.
+      Emacs: <Ctrl+o>
 
-    PreviousLine             (Cmd: unbound              Emacs: unbound)
+    AcceptLine:
 
-        Move the cursor to the previous line if the input has multiple lines.
+      
 
-    ForwardChar              (Cmd: <RightArrow>         Emacs: <RightArrow> or <Ctrl+F>)
+      Cmd: <Enter>
+      Emacs: <Enter>
+      Vi insert mode: <Enter>
 
-        Move the cursor one character to the right.  This may move the cursor to the next
-        line of multi-line input.
+    AddLine:
 
-    BackwardChar             (Cmd: <LeftArrow>          Emacs: <LeftArrow> or <Ctrl+B>)
+      
 
-        Move the cursor one character to the left.  This may move the cursor to the previous
-        line of multi-line input.
+      Cmd: <Shift+Enter>
+      Emacs: <Shift+Enter>
+      Vi insert mode: <Shift+Enter>
+      Vi command mode: <Shift+Enter>
 
-    ForwardWord              (Cmd: unbound              Emacs: <Alt+F>)
+    BackwardDeleteChar:
 
-        Move the cursor forward to the end of the current word, or if between words,
-        to the end of the next word.  Word delimiter characters can be set with:
+      
 
-            Set-PSReadlineOption -WordDelimiters <string of delimiter characters>
+      Cmd: <Backspace>, <Ctrl+h>
+      Emacs: <Backspace>, <Ctrl+Backspace>, <Ctrl+h>
+      Vi insert mode: <Backspace>
+      Vi command mode: <X>, <d,h>
 
-    NextWord                 (Cmd: <Ctrl+RightArrow>    Emacs: unbound)
+    BackwardDeleteLine:
 
-        Move the cursor forward to the start of the next word.  Word delimiter characters
-        can be set with:
+      
 
-            Set-PSReadlineOption -WordDelimiters <string of delimiter characters>
+      Cmd: <Ctrl+Home>
+      Vi insert mode: <Ctrl+u>, <Ctrl+Home>
+      Vi command mode: <Ctrl+u>, <Ctrl+Home>, <d,0>
 
-    BackwardWord             (Cmd: <Ctrl+LeftArrow>     Emacs: <Alt+B>)
+    BackwardDeleteWord:
 
-        Move the cursor back to the start of the current word, or if between words,
-        the start of the previous word.  Word delimiter characters
-        can be set with:
+      
 
-            Set-PSReadlineOption -WordDelimiters <string of delimiter characters>
+      Vi command mode: <Ctrl+w>, <d,b>
 
-    ShellForwardWord         (Cmd: unbound              Emacs: unbound)
+    BackwardKillLine:
 
-        Like ForwardWord except word boundaries are defined by PowerShell token boundaries.
+      
 
-    ShellNextWord            (Cmd: unbound              Emacs: unbound)
+      Emacs: <Ctrl+u>, <Ctrl+x,Backspace>
 
-        Like NextWord except word boundaries are defined by PowerShell token boundaries.
+    BackwardKillWord:
 
-    ShellBackwardWord        (Cmd: unbound              Emacs: unbound)
+      
 
-        Like BackwardWord except word boundaries are defined by PowerShell token boundaries.
+      Cmd: <Ctrl+Backspace>, <Ctrl+w>
+      Emacs: <Alt+Backspace>, <Escape,Backspace>
+      Vi insert mode: <Ctrl+Backspace>
+      Vi command mode: <Ctrl+Backspace>
 
-    GotoBrace                (Cmd: <Ctrl+}>             Emacs: unbound)
+    CancelLine:
 
-        Go to the matching parenthesis, curly brace, or square bracket.
+      
 
-    AddLine                  (Cmd: <Shift-Enter>        Emacs: <Shift-Enter>)
+      Vi insert mode: <Ctrl+c>
+      Vi command mode: <Ctrl+c>
 
-        The continuation prompt is displayed on the next line and PSReadline waits for
-        keys to edit the current input.  This is useful to enter multi-line input as
-        a single command even when a single line is complete input by itself.
+    Copy:
 
-  Basic editing
-  -------------
+      
 
-    CancelLine               (Cmd: unbound              Emacs: unbound)
+      Cmd: <Ctrl+C>
 
-        Cancel all editing to the line, leave the line of input on the screen but
-        return from PSReadline without executing the input.
+    CopyOrCancelLine:
 
-    RevertLine               (Cmd: <ESC>                Emacs: <Alt+R>)
+      
 
-        Reverts all of the input since the last input was accepted and executed.
-        This is equivalent to doing Undo until there is nothing left to undo.
+      Cmd: <Ctrl+c>
+      Emacs: <Ctrl+c>
 
-    BackwardDeleteChar       (Cmd: <Backspace>          Emacs: <Backspace> or <Ctrl+H>)
+    Cut:
 
-        Delete the character before the cursor.
+      
 
-    DeleteChar               (Cmd: <Delete>             Emacs: <Delete>)
+      Cmd: <Ctrl+x>
 
-        Delete the character under the cursor.
+    DeleteChar:
 
-    DeleteCharOrExit         (Cmd: unbound              Emacs: <Ctrl+D>)
+      
 
-        Like DeleteChar, unless the line is empty, in which case exit the process.
+      Cmd: <Delete>
+      Emacs: <Delete>
+      Vi insert mode: <Delete>
+      Vi command mode: <Delete>, <x>, <d,l>, <d,Spacebar>
 
-    AcceptLine               (Cmd: <Enter>              Emacs: <Enter> or <Ctrl+M>)
+    DeleteCharOrExit:
 
-        Attempt to execute the current input.  If the current input is incomplete (for
-        example there is a missing closing parenthesis, bracket, or quote, then the
-        continuation prompt is displayed on the next line and PSReadline waits for
-        keys to edit the current input.
+      
 
-    AcceptAndGetNext         (Cmd: unbound              Emacs: <Ctrl+O>)
+      Emacs: <Ctrl+d>
 
-        Like AcceptLine, but after the line completes, start editing the next line
-        from history.
+    DeleteEndOfWord:
 
-    ValidateAndAcceptLine    (Cmd: unbound              Emacs: unbound)
+      
 
-        Like AcceptLine but performs additional validation including:
+      Vi command mode: <d,e>
 
-            * Check for additional parse errors
-            * Validate command names are all found
-            * If using PowerShell V4 or greater, validate the parameters and arguments
+    DeleteLine:
 
-        If there are any errors, the error message is displayed and not accepted nor added
-        to the history unless you either correct the command line or execute AcceptLine or
-        ValidateAndAcceptLine again while the error message is displayed.
+      
 
-    BackwardDeleteLine       (Cmd: <Ctrl+Home>          Emacs: unbound)
+      Vi command mode: <d,d>
 
-        Delete the text from the start of the input to the cursor.
+    DeleteLineToFirstChar:
 
-    ForwardDeleteLine        (Cmd: <Ctrl+End>           Emacs: unbound)
+      
 
-        Delete the text from the cursor to the end of the input.
+      Vi command mode: <d,^>
 
-    SelectBackwardChar       (Cmd: <Shift+LeftArrow>    Emacs: <Shift+LeftArrow>)
+    DeleteToEnd:
 
-        Adjust the current selection to include the previous character.
+      
 
-    SelectForwardChar        (Cmd: <Shift+RightArrow>   Emacs: <Shift+RightArrow>)
+      Vi command mode: <D>, <d,$>
 
-        Adjust the current selection to include the next character.
+    DeleteWord:
 
-    SelectBackwardWord       (Cmd: <Shift+Ctrl+LeftArrow> Emacs: <Alt+Shift+B>)
+      
 
-        Adjust the current selection to include the previous word.
+      Vi command mode: <d,w>
 
-    SelectForwardWord        (Cmd: unbound              Emacs: <Alt+Shift+F>)
+    ForwardDeleteLine:
 
-        Adjust the current selection to include the next word using ForwardWord.
+      
 
-    SelectNextWord           (Cmd: <Shift+Ctrl+RightArrow> Emacs: unbound)
+      Cmd: <Ctrl+End>
+      Vi insert mode: <Ctrl+End>
+      Vi command mode: <Ctrl+End>
 
-        Adjust the current selection to include the next word using NextWord.
+    InsertLineAbove:
 
-    SelectShellForwardWord   (Cmd: unbound              Emacs: unbound)
+      
 
-        Adjust the current selection to include the next word using ShellForwardWord.
+      Cmd: <Ctrl+Enter>
 
-    SelectShellNextWord      (Cmd: unbound              Emacs: unbound)
+    InsertLineBelow:
 
-        Adjust the current selection to include the next word using ShellNextWord.
+      
 
-    SelectShellBackwardWord  (Cmd: unbound              Emacs: unbound)
+      Cmd: <Shift+Ctrl+Enter>
 
-        Adjust the current selection to include the previous word using ShellBackwardWord.
+    InvertCase:
 
-    SelectBackwardsLine      (Cmd: <Shift+Home>         Emacs: <Shift+Home>)
+      
 
-        Adjust the current selection to include from the cursor to the start of the line.
+      Vi command mode: <~>
 
-    SelectLine               (Cmd: <Shift+End>          Emacs: <Shift+End>)
+    KillLine:
 
-        Adjust the current selection to include from the cursor to the end of the line.
+      
 
-    SelectAll                (Cmd: <Ctrl+A>             Emacs: unbound)
+      Emacs: <Ctrl+k>
 
-        Select the entire line. Moves the cursor to the end of the line.
+    KillRegion:
 
-    SelfInsert               (Cmd: <a>, <b>, ...        Emacs: <a>, <b>, ...)
+      
 
-        Insert the key entered.
+      Function is unbound.
 
-    Redo                     (Cmd: <Ctrl+Y>             Emacs: unbound)
+    KillWord:
 
-        Redo an insertion or deletion that was undone by Undo.
+      
 
-    Undo                     (Cmd: <Ctrl+Z>             Emacs: <Ctrl+_>)
+      Cmd: <Alt+d>, <Ctrl+Delete>
+      Emacs: <Alt+d>, <Escape,d>
+      Vi insert mode: <Ctrl+Delete>
+      Vi command mode: <Ctrl+Delete>
 
-        Undo a previous insertion or deletion.
+    Paste:
 
-  History
-  -------
+      
 
-    ClearHistory             (Cmd: Alt+F7               Emacs: unbound)
+      Cmd: <Ctrl+v>, <Shift+Insert>
+      Vi insert mode: <Ctrl+v>
+      Vi command mode: <Ctrl+v>
 
-        Clears history in PSReadline.  This does not affect PowerShell history.
+    PasteAfter:
 
-    PreviousHistory          (Cmd: <UpArrow>            Emacs: <UpArrow> or <Ctrl+P>)
+      
 
-        Replace the current input with the 'previous' item from PSReadline history.
+      Vi command mode: <p>
 
-    NextHistory              (Cmd: <DownArrow>          Emacs: <DownArrow> or <Ctrl+N>)
+    PasteBefore:
 
-        Replace the current input with the 'next' item from PSReadline history.
+      
 
-    ForwardSearchHistory     (Cmd: <Ctrl+S>             Emacs: <Ctrl+S>)
+      Vi command mode: <P>
 
-        Search forward from the current history line interactively.
+    PrependAndAccept:
 
-    ReverseSearchHistory     (Cmd: <Ctrl+R>             Emacs: <Ctrl+R>)
+      
 
-        Search backward from the current history line interactively.
+      Vi command mode: <#>
 
-    HistorySearchBackward    (Cmd: <F8>                 Emacs: unbound)
+    Redo:
 
-        Replace the current input with the 'previous' item from PSReadline history
-        that matches the characters between the start and the input and the cursor.
+      
 
-    HistorySearchForward     (Cmd: <Shift+F8>           Emacs: unbound)
+      Cmd: <Ctrl+y>
+      Vi insert mode: <Ctrl+y>
+      Vi command mode: <Ctrl+y>
 
-        Replace the current input with the 'next' item from PSReadline history
-        that matches the characters between the start and the input and the cursor.
+    RepeatLastCommand:
 
-    BeginningOfHistory       (Cmd: unbound              Emacs: <Alt+<>)
+      
 
-        Replace the current input with the last item from PSReadline history.
+      Vi command mode: <.>
 
-    EndOfHistory             (Cmd: unbound              Emacs: <Alt+>>)
+    RevertLine:
 
-        Replace the current input with the last item in PSReadline history, which
-        is the possibly empty input that was entered before any history commands.
+      
 
-  Tab Completion
-  --------------
+      Cmd: <Escape>
+      Emacs: <Alt+r>, <Escape,r>
 
-    TabCompleteNext          (Cmd: <Tab>                Emacs: unbound)
+    ShellBackwardKillWord:
 
-        Attempt to complete the text surrounding the cursor with the next
-        available completion.
+      
 
-    TabCompletePrevious      (Cmd: <Shift-Tab>          Emacs: unbound)
+      Function is unbound.
 
-        Attempt to complete the text surrounding the cursor with the next
-        previous completion.
+    ShellKillWord:
 
-    Complete                 (Cmd: unbound              Emacs: <Tab>)
+      
 
-        Attempt to perform completion on the text surrounding the cursor.
-        If there are multiple possible completions, the longest unambiguous
-        prefix is used for completion.  If trying to complete the longest
-        unambiguous completion, a list of possible completions is displayed.
+      Function is unbound.
 
-    MenuComplete             (Cmd: <Ctrl+Space>         Emacs: <Ctrl+Space>)
+    SwapCharacters:
 
-        Attempt to perform completion on the text surrounding the cursor.
-        If there are multiple possible completions, a list of possible
-        completions is displayed and you can select the correct completion
-        using the arrow keys or Tab/Shift+Tab. Escape and Ctrl+G cancel
-        the menu selection and reverts the line to the state before invoking
-        MenuComplete.
+      
 
-    PossibleCompletions      (Cmd: unbound              Emacs: <Alt+Equals>)
+      Emacs: <Ctrl+t>
+      Vi insert mode: <Ctrl+t>
+      Vi command mode: <Ctrl+t>
 
-        Display the list of possible completions.
+    Undo:
 
-    SetMark                  (Cmd: unbound              Emacs: <Alt+Space>)
+      
 
-        Mark the current location of the cursor for use in a subsequent editing command.
+      Cmd: <Ctrl+z>
+      Emacs: <Ctrl+_>, <Ctrl+x,Ctrl+u>
+      Vi insert mode: <Ctrl+z>
+      Vi command mode: <Ctrl+z>, <u>
 
-    ExchangePointAndMark     (Cmd: unbound              Emacs: <Ctrl+X,Ctrl+X>)
+    UndoAll:
 
-        The cursor is placed at the location of the mark and the mark is moved
-        to the location of the cursor.
+      
 
-  Kill/Yank
-  ---------
+      Vi command mode: <U>
 
-  Kill and yank operate on a clipboard in the PSReadline module.  There is a ring
-  buffer called the kill ring - killed text will be added to the kill ring up
-  and yank will copy text from the most recent kill.  YankPop will cycle through
-  items in the kill ring.  When the kill ring is full, new items will replace the
-  oldest items.  A kill operation that is immediately preceded by another kill operation
-  will append the previous kill instead of adding a new item or replacing an item
-  in the kill ring.  This is how you can cut a part of a line, say for example with multiple
-  KillWord operations, then yank them back elsewhere as a single yank.
+    UnixWordRubout:
 
-    KillLine                 (Cmd: unbound              Emacs: <Ctrl+K>)
+      
 
-        Clear the input from the cursor to the end of the line.  The cleared text is placed
-        in the kill ring.
+      Emacs: <Ctrl+w>
 
-    BackwardKillLine         (Cmd: unbound              Emacs: <Ctrl+U> or <Ctrl+X,Backspace>)
+    ValidateAndAcceptLine:
 
-        Clear the input from the start of the input to the cursor.  The cleared text is placed
-        in the kill ring.
+      
 
-    KillWord                 (Cmd: unbound              Emacs: <Alt+D>)
+      Emacs: <Ctrl+m>
 
-        Clear the input from the cursor to the end of the current word.  If the cursor
-        is between words, the input is cleared from the cursor to the end of the next word.
-        The cleared text is placed in the kill ring.
+    ViAcceptLine:
 
-    BackwardKillWord         (Cmd: unbound              Emacs: <Alt+Backspace>)
+      
 
-        Clear the input from the start of the current word to the cursor.  If the cursor
-        is between words, the input is cleared from the start of the previous word to the
-        cursor.  The cleared text is placed in the kill ring.
+      Vi command mode: <Enter>
 
-    ShellKillWord            (Cmd: unbound              Emacs: unbound)
+    ViAcceptLineOrExit:
 
-        Like KillWord except word boundaries are defined by PowerShell token boundaries.
+      
 
-    ShellBackwardKillWord    (Cmd: unbound              Emacs: unbound)
+      Vi insert mode: <Ctrl+d>
+      Vi command mode: <Ctrl+d>
 
-        Like BackwardKillWord except word boundaries are defined by PowerShell token boundaries.
+    ViAppendLine:
 
-    UnixWordRubout           (Cmd: unbound              Emacs: <Ctrl+W>)
+      
 
-        Like BackwardKillWord except word boundaries are defined by whitespace.
+      Vi command mode: <o>
 
-    KillRegion               (Cmd: unbound              Emacs: unbound)
+    ViBackwardDeleteGlob:
 
-        Kill the text between the cursor and the mark.
+      
 
-    Copy                     (Cmd: <Ctrl+Shift+C>       Emacs: unbound)
+      Vi command mode: <d,B>
 
-        Copy selected region to the system clipboard.  If no region is selected, copy the whole line.
+    ViBackwardGlob:
 
-    CopyOrCancelLine         (Cmd: <Ctrl+C>             Emacs: <Ctrl+C>)
+      
 
-        Either copy selected text to the clipboard, or if no text is selected, cancel editing
-        the line with CancelLine.
+      Vi command mode: <B>
 
-    Cut                      (Cmd: <Ctrl+X>             Emacs: unbound)
+    ViDeleteBrace:
 
-        Delete selected region placing deleted text in the system clipboard.
+      
 
-    Yank                     (Cmd: unbound              Emacs: <Ctrl+Y>)
+      Vi command mode: <d,%>
 
-        Add the most recently killed text to the input.
+    ViDeleteEndOfGlob:
 
-    YankPop                  (Cmd: unbound              Emacs: <Alt+Y>)
+      
 
-        If the previous operation was Yank or YankPop, replace the previously yanked
-        text with the next killed text from the kill ring.
+      Vi command mode: <d,E>
 
-    ClearKillRing            (Cmd: unbound              Emacs: unbound)
+    ViDeleteGlob:
 
-        The contents of the kill ring are cleared.
+      
 
-    Paste                    (Cmd: <Ctrl+V>             Emacs: unbound)
+      Vi command mode: <d,W>
 
-        This is similar to Yank, but uses the system clipboard instead of the kill ring.
+    ViDeleteToBeforeChar:
 
-    YankLastArg              (Cmd: <Alt+.>              Emacs: <Alt+.>, <Alt+_>)
+      
 
-        Insert the last argument from the previous command in history.  Repeated operations
-        will replace the last inserted argument with the last argument from the previous
-        command (so Alt+. Alt+. will insert the last argument of the second to last history
-        line.)
+      Vi command mode: <d,t>
 
-        With an argument, the first time YankLastArg behaves like YankNthArg.  A negative
-        argument on subsequent YankLastArg calls will change the direction while going
-        through history.  For example, if you hit Alt+. one too many times, you can type
-        Alt+- Alt+. to reverse the direction.
+    ViDeleteToBeforeCharBackward:
 
-        Arguments are based on PowerShell tokens.
+      
 
-    YankNthArg               (Cmd: unbound              Emacs: <Alt+Ctrl+Y>)
+      Vi command mode: <d,T>
 
-        Insert the first argument (not the command name) of the previous command in history.
+    ViDeleteToChar:
 
-        With an argument, insert the nth argument where 0 is typically the command.  Negative
-        arguments start from the end.
+      
 
-        Arguments are based on PowerShell tokens.
+      Vi command mode: <d,f>
 
-  Miscellaneous
-  -------------
+    ViDeleteToCharBackward:
 
-    Abort                    (Cmd: unbound              Emacs: <Ctrl+G>)
+      
 
-        Abort the current action, e.g. stop interactive history search.
-        Does not cancel input like CancelLine.
+      Vi command mode: <d,F>
 
-    CharacterSearch          (Cmd: <F3>                 Emacs: <Ctrl+]>)
+    ViInsertAtBegining:
 
-        Read a key and search forwards for that character.  With an argument, search
-        forwards for the nth occurrence of that argument.  With a negative argument,
-        searches backwards.
+      
 
-    CharacterSearchBackward  (Cmd: <Shift+F3>           Emacs: <Alt+Ctrl+]>)
+      Vi command mode: <I>
 
-        Like CharacterSearch, but searches backwards.  With a negative argument, searches
-        forwards.
+    ViInsertAtEnd:
 
-    ClearScreen              (Cmd: <Ctrl+L>             Emacs: <Ctrl+L>)
+      
 
-        Clears the screen and displays the current prompt and input at the top of the screen.
+      Vi command mode: <A>
 
-    DigitArgument            (Cmd: unbound              Emacs: <Alt+[0..9]>,,<Alt+->)
+    ViInsertLine:
 
-        Used to pass numeric arguments to functions like CharacterSearch or YankNthArg.
-        Alt+- toggles the argument to be negative/non-negative.  To enter 80 '*' characters,
-        you could type Alt+8 Alt+0 *.
+      
 
-    CaptureScreen            (Cmd: unbound              Emacs: unbound)
+      Vi command mode: <O>
 
-        Copies selected lines to the clipboard in both text and rtf formats.  Use up/down
-        arrow keys to the first line to select, then Shift+UpArrow/Shift+DownArrow to select
-        multiple lines.  After selecting, press Enter to copy the text.  Escape/Ctrl+C/Ctrl+G
-        will cancel so nothing is copied to the clipboard.
+    ViInsertWithAppend:
 
-    InvokePrompt             (Cmd: unbound              Emacs: unbound)
+      
 
-        Erases the current prompt and calls the prompt function to redisplay
-        the prompt.  Useful for custom key handlers that change state, e.g.
-        change the current directory.
+      Vi command mode: <a>
 
-    WhatIsKey                (Cmd: <Alt+?>              Emacs: <Alt+?>)
+    ViInsertWithDelete:
 
-        Read a key or chord and display the key binding.
+      
 
-    ShowKeyBindings          (Cmd: <Ctrl+Alt+?>         Emacs: <Ctrl+Alt+?>)
+      Vi command mode: <s>
 
-        Show all of the currently bound keys.
+    ViJoinLines:
 
-    ScrollDisplayUp          (Cmd: <PageUp>             Emacs: <PageUp>)
+      
 
-        Scroll the display up one screen.
+      Vi command mode: <J>
 
-    ScrollDisplayUpLine      (Cmd: <Ctrl+PageUp>        Emacs: <Ctrl+PageUp>)
+    ViReplaceLine:
 
-        Scroll the display up one line.
+      
 
-    ScrollDisplayDown        (Cmd: <PageDown>           Emacs: <PageDown>)
+      Vi command mode: <S>, <c,c>
 
-        Scroll the display down one screen.
+    ViReplaceToBeforeChar:
 
-    ScrollDisplayDownLine    (Cmd: <Ctrl+PageDown>      Emacs: <Ctrl+PageDown>)
+      
 
-        Scroll the display down one line.
+      Vi command mode: <c,t>
 
-    ScrollDisplayTop         (Cmd: unbound              Emacs: <Ctrl+Home>)
+    ViReplaceToBeforeCharBackward:
 
-        Scroll the display to the top.
+      
 
-    ScrollDisplayToCursor    (Cmd: unbound              Emacs: <Ctrl+End>)
+      Vi command mode: <c,T>
 
-        Scroll the display to the cursor.
+    ViReplaceToChar:
+
+      
+
+      Vi command mode: <c,f>
+
+    ViReplaceToCharBackward:
+
+      
+
+      Vi command mode: <c,F>
+
+    ViYankBeginningOfLine:
+
+      
+
+      Vi command mode: <y,0>
+
+    ViYankEndOfGlob:
+
+      
+
+      Vi command mode: <y,E>
+
+    ViYankEndOfWord:
+
+      
+
+      Vi command mode: <y,e>
+
+    ViYankLeft:
+
+      
+
+      Vi command mode: <y,h>
+
+    ViYankLine:
+
+      
+
+      Vi command mode: <y,y>
+
+    ViYankNextGlob:
+
+      
+
+      Vi command mode: <y,W>
+
+    ViYankNextWord:
+
+      
+
+      Vi command mode: <y,w>
+
+    ViYankPercent:
+
+      
+
+      Vi command mode: <y,%>
+
+    ViYankPreviousGlob:
+
+      
+
+      Vi command mode: <y,B>
+
+    ViYankPreviousWord:
+
+      
+
+      Vi command mode: <y,b>
+
+    ViYankRight:
+
+      
+
+      Vi command mode: <y,l>, <y,Spacebar>
+
+    ViYankToEndOfLine:
+
+      
+
+      Vi command mode: <y,$>
+
+    ViYankToFirstChar:
+
+      
+
+      Vi command mode: <y,^>
+
+    Yank:
+
+      
+
+      Emacs: <Ctrl+y>
+
+    YankLastArg:
+
+      
+
+      Cmd: <Alt+.>
+      Emacs: <Alt+.>, <Alt+_>, <Escape,.>, <Escape,_>
+
+    YankNthArg:
+
+      
+
+      Emacs: <Ctrl+Alt+y>, <Escape,Ctrl+y>
+
+    YankPop:
+
+      
+
+      Emacs: <Alt+y>, <Escape,y>
+
+  Cursor movement functions
+  -------------------------
+
+    BackwardChar:
+
+      
+
+      Cmd: <LeftArrow>
+      Emacs: <LeftArrow>, <Ctrl+b>
+
+    BackwardWord:
+
+      
+
+      Cmd: <Ctrl+LeftArrow>
+      Emacs: <Alt+b>, <Escape,b>
+      Vi insert mode: <Ctrl+LeftArrow>
+      Vi command mode: <Ctrl+LeftArrow>
+
+    BeginningOfLine:
+
+      
+
+      Cmd: <Home>
+      Emacs: <Home>, <Ctrl+a>
+      Vi insert mode: <Home>
+      Vi command mode: <Home>
+
+    EndOfLine:
+
+      
+
+      Cmd: <End>
+      Emacs: <End>, <Ctrl+e>
+      Vi insert mode: <End>
+
+    ForwardChar:
+
+      
+
+      Cmd: <RightArrow>
+      Emacs: <RightArrow>, <Ctrl+f>
+
+    ForwardWord:
+
+      
+
+      Emacs: <Alt+f>, <Escape,f>
+
+    GotoBrace:
+
+      
+
+      Cmd: <Ctrl+]>
+      Vi insert mode: <Ctrl+]>
+      Vi command mode: <Ctrl+]>
+
+    GotoColumn:
+
+      
+
+      Vi command mode: <|>
+
+    GotoFirstNonBlankOfLine:
+
+      
+
+      Vi command mode: <^>, <_>
+
+    MoveToEndOfLine:
+
+      
+
+      Vi command mode: <End>, <$>
+
+    NextLine:
+
+      
+
+      Function is unbound.
+
+    NextWord:
+
+      
+
+      Cmd: <Ctrl+RightArrow>
+      Vi insert mode: <Ctrl+RightArrow>
+      Vi command mode: <Ctrl+RightArrow>
+
+    NextWordEnd:
+
+      
+
+      Vi command mode: <e>
+
+    PreviousLine:
+
+      
+
+      Function is unbound.
+
+    ShellBackwardWord:
+
+      
+
+      Function is unbound.
+
+    ShellForwardWord:
+
+      
+
+      Function is unbound.
+
+    ShellNextWord:
+
+      
+
+      Function is unbound.
+
+    ViBackwardWord:
+
+      
+
+      Vi command mode: <b>
+
+    ViEndOfGlob:
+
+      
+
+      Vi command mode: <E>
+
+    ViEndOfPreviousGlob:
+
+      
+
+      Function is unbound.
+
+    ViGotoBrace:
+
+      
+
+      Vi command mode: <%>
+
+    ViNextGlob:
+
+      
+
+      Vi command mode: <W>
+
+    ViNextWord:
+
+      
+
+      Vi command mode: <w>
+
+  History functions
+  -----------------
+
+    BeginningOfHistory:
+
+      
+
+      Emacs: <Alt+<>
+
+    ClearHistory:
+
+      
+
+      Cmd: <Alt+F7>
+
+    EndOfHistory:
+
+      
+
+      Emacs: <Alt+>>
+
+    ForwardSearchHistory:
+
+      
+
+      Cmd: <Ctrl+s>
+      Emacs: <Ctrl+s>
+
+    HistorySearchBackward:
+
+      
+
+      Cmd: <F8>
+
+    HistorySearchForward:
+
+      
+
+      Cmd: <Shift+F8>
+
+    NextHistory:
+
+      
+
+      Cmd: <DownArrow>
+      Emacs: <DownArrow>, <Ctrl+n>
+      Vi insert mode: <DownArrow>
+      Vi command mode: <DownArrow>, <j>, <+>
+
+    PreviousHistory:
+
+      
+
+      Cmd: <UpArrow>
+      Emacs: <UpArrow>, <Ctrl+p>
+      Vi insert mode: <UpArrow>
+      Vi command mode: <UpArrow>, <k>, <->
+
+    ReverseSearchHistory:
+
+      
+
+      Cmd: <Ctrl+r>
+      Emacs: <Ctrl+r>
+
+    ViSearchHistoryBackward:
+
+      
+
+      Vi insert mode: <Ctrl+r>
+      Vi command mode: </>, <Ctrl+r>
+
+  Completion functions
+  --------------------
+
+    Complete:
+
+      
+
+      Emacs: <Tab>
+
+    MenuComplete:
+
+      
+
+      Cmd: <Ctrl+@>, <Ctrl+Spacebar>
+      Emacs: <Ctrl+Spacebar>
+
+    PossibleCompletions:
+
+      
+
+      Emacs: <Alt+=>
+      Vi insert mode: <Ctrl+Spacebar>
+      Vi command mode: <Ctrl+Spacebar>
+
+    TabCompleteNext:
+
+      
+
+      Cmd: <Tab>
+      Vi command mode: <Tab>
+
+    TabCompletePrevious:
+
+      
+
+      Cmd: <Shift+Tab>
+      Vi command mode: <Shift+Tab>
+
+    ViTabCompleteNext:
+
+      
+
+      Vi insert mode: <Tab>
+
+    ViTabCompletePrevious:
+
+      
+
+      Vi insert mode: <Shift+Tab>
+
+  Miscellaneous functions
+  -----------------------
+
+    CaptureScreen:
+
+      
+
+      Function is unbound.
+
+    ClearScreen:
+
+      
+
+      Cmd: <Ctrl+l>
+      Emacs: <Ctrl+l>
+      Vi insert mode: <Ctrl+l>
+      Vi command mode: <Ctrl+l>
+
+    DigitArgument:
+
+      
+
+      Cmd: <Alt+0>, <Alt+1>, <Alt+2>, <Alt+3>, <Alt+4>, <Alt+5>, <Alt+6>, <Alt+7>, <Alt+8>, <Alt+9>, <Alt+->
+      Emacs: <Alt+0>, <Alt+1>, <Alt+2>, <Alt+3>, <Alt+4>, <Alt+5>, <Alt+6>, <Alt+7>, <Alt+8>, <Alt+9>, <Alt+->
+      Vi command mode: <0>, <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>, <9>
+
+    InvokePrompt:
+
+      
+
+      Function is unbound.
+
+    ScrollDisplayDown:
+
+      
+
+      Cmd: <PageDown>
+      Emacs: <PageDown>
+
+    ScrollDisplayDownLine:
+
+      
+
+      Cmd: <Ctrl+PageDown>
+      Emacs: <Ctrl+PageDown>
+
+    ScrollDisplayToCursor:
+
+      
+
+      Emacs: <Ctrl+End>
+
+    ScrollDisplayTop:
+
+      
+
+      Emacs: <Ctrl+Home>
+
+    ScrollDisplayUp:
+
+      
+
+      Cmd: <PageUp>
+      Emacs: <PageUp>
+
+    ScrollDisplayUpLine:
+
+      
+
+      Cmd: <Ctrl+PageUp>
+      Emacs: <Ctrl+PageUp>
+
+    SelfInsert:
+
+      
+
+      Function is unbound.
+
+    ShowKeyBindings:
+
+      
+
+      Cmd: <Ctrl+Alt+?>
+      Emacs: <Ctrl+Alt+?>
+      Vi insert mode: <Ctrl+Alt+?>
+
+    ViCommandMode:
+
+      
+
+      Vi insert mode: <Escape>
+
+    ViDigitArgumentInChord:
+
+      
+
+      Function is unbound.
+
+    ViEditVisually:
+
+      
+
+      Emacs: <Ctrl+x,Ctrl+e>
+      Vi command mode: <v>
+
+    ViExit:
+
+      
+
+      Function is unbound.
+
+    ViInsertMode:
+
+      
+
+      Vi command mode: <i>
+
+    WhatIsKey:
+
+      
+
+      Cmd: <Alt+?>
+      Emacs: <Alt+?>
+
+  Selection functions
+  -------------------
+
+    ExchangePointAndMark:
+
+      
+
+      Emacs: <Ctrl+x,Ctrl+x>
+
+    SelectAll:
+
+      
+
+      Cmd: <Ctrl+a>
+
+    SelectBackwardChar:
+
+      
+
+      Cmd: <Shift+LeftArrow>
+      Emacs: <Shift+LeftArrow>
+
+    SelectBackwardsLine:
+
+      
+
+      Cmd: <Shift+Home>
+      Emacs: <Shift+Home>
+
+    SelectBackwardWord:
+
+      
+
+      Cmd: <Shift+Ctrl+LeftArrow>
+      Emacs: <Alt+B>
+
+    SelectForwardChar:
+
+      
+
+      Cmd: <Shift+RightArrow>
+      Emacs: <Shift+RightArrow>
+
+    SelectForwardWord:
+
+      
+
+      Emacs: <Alt+F>
+
+    SelectLine:
+
+      
+
+      Cmd: <Shift+End>
+      Emacs: <Shift+End>
+
+    SelectNextWord:
+
+      
+
+      Cmd: <Shift+Ctrl+RightArrow>
+
+    SelectShellBackwardWord:
+
+      
+
+      Function is unbound.
+
+    SelectShellForwardWord:
+
+      
+
+      Function is unbound.
+
+    SelectShellNextWord:
+
+      
+
+      Function is unbound.
+
+    SetMark:
+
+      
+
+      Emacs: <Ctrl+@>
+
+  Search functions
+  ----------------
+
+    CharacterSearch:
+
+      
+
+      Cmd: <F3>
+      Emacs: <Ctrl+]>
+      Vi insert mode: <F3>
+      Vi command mode: <F3>
+
+    CharacterSearchBackward:
+
+      
+
+      Cmd: <Shift+F3>
+      Emacs: <Ctrl+Alt+]>
+      Vi insert mode: <Shift+F3>
+      Vi command mode: <Shift+F3>
+
+    RepeatLastCharSearch:
+
+      
+
+      Vi command mode: <;>
+
+    RepeatLastCharSearchBackwards:
+
+      
+
+      Vi command mode: <,>
+
+    RepeatSearch:
+
+      
+
+      Vi command mode: <n>
+
+    RepeatSearchBackward:
+
+      
+
+      Vi command mode: <N>
+
+    SearchChar:
+
+      
+
+      Vi command mode: <f>
+
+    SearchCharBackward:
+
+      
+
+      Vi command mode: <F>
+
+    SearchCharBackwardWithBackoff:
+
+      
+
+      Vi command mode: <T>
+
+    SearchCharWithBackoff:
+
+      
+
+      Vi command mode: <t>
+
+    SearchForward:
+
+      
+
+      Vi insert mode: <Ctrl+s>
+      Vi command mode: <?>, <Ctrl+s>
+
+
 
   Custom Key Bindings
   -------------------
 
-  PSReadline supports custom key bindings using the cmdlet Set-PSReadlineKeyHandler.  Most
+  PSReadLine supports custom key bindings using the cmdlet Set-PSReadLineKeyHandler.  Most
   custom key bindings will call one of the above functions, for example:
 
-      Set-PSReadlineKeyHandler -Key UpArrow -Function HistorySearchBackward
+      Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 
   You can bind a ScriptBlock to a key.  The ScriptBlock can do pretty much anything you want.
   Some useful examples include:
@@ -502,7 +1140,7 @@ LONG DESCRIPTION
   useful when you realize you forgot to do something, but don't want to re-enter the command line
   you've already entered.
 
-        Set-PSReadlineKeyHandler -Key Alt+w `
+        Set-PSReadLineKeyHandler -Key Alt+w `
                                  -BriefDescription SaveInHistory `
                                  -LongDescription "Save current line in history but do not execute" `
                                  -ScriptBlock {
@@ -520,8 +1158,8 @@ LONG DESCRIPTION
             [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
         }
 
-  You can see many more examples in the file SamplePSReadlineProfile.ps1 which is installed in the
-  PSReadline module folder.
+  You can see many more examples in the file SamplePSReadLineProfile.ps1 which is installed in the
+  PSReadLine module folder.
 
   Most key bindings will want to take advantage of some helper functions for editing the command
   line those APIs are documented in the next section.
@@ -529,7 +1167,7 @@ LONG DESCRIPTION
   Custom Key Binding Support APIs
   -------------------------------
 
-  The following functions are public in Microsoft.PowerShell.PSConsoleReadline, but cannot be directly
+  The following functions are public in Microsoft.PowerShell.PSConsoleReadLine, but cannot be directly
   bound to a key.  Most are useful in custom key bindings.
 
     void AddToHistory(string command)
@@ -556,13 +1194,14 @@ LONG DESCRIPTION
         second is used if your binding is doing something more advanced with the Ast.
 
     IEnumerable[Microsoft.PowerShell.KeyHandler] GetKeyHandlers(bool includeBound, bool includeUnbound)
+    IEnumerable[Microsoft.PowerShell.KeyHandler] GetKeyHandlers(string[] Chord)
 
-        This function is used by Get-PSReadlineKeyHandler and probably isn't useful in a custom
-        key binding.
+        These two functions are used by Get-PSReadLineKeyHandler. The first is used to get all
+        key bindings. The second is used to get specific key bindings.
 
-    Microsoft.PowerShell.PSConsoleReadlineOptions GetOptions()
+    Microsoft.PowerShell.PSConsoleReadLineOptions GetOptions()
 
-        This function is used by Get-PSReadlineOption and probably isn't too useful in a custom
+        This function is used by Get-PSReadLineOption and probably isn't too useful in a custom
         key binding.
 
     void GetSelectionState([ref] int start, [ref] int length)
@@ -577,12 +1216,12 @@ LONG DESCRIPTION
 
     string ReadLine(runspace remoteRunspace, System.Management.Automation.EngineIntrinsics engineIntrinsics)
 
-        This is the main entry point to PSReadline. It does not support recursion, so is not useful
+        This is the main entry point to PSReadLine. It does not support recursion, so is not useful
         in a custom key binding.
 
     void RemoveKeyHandler(string[] key)
 
-        This function is used by Remove-PSReadlineKeyHandler and probably isn't too useful in a
+        This function is used by Remove-PSReadLineKeyHandler and probably isn't too useful in a
         custom key binding.
 
     void Replace(int start, int length, string replacement)
@@ -595,9 +1234,9 @@ LONG DESCRIPTION
 
         Move the cursor to the given offset.  Cursor movement is not tracked for undo.
 
-    void SetOptions(Microsoft.PowerShell.SetPSReadlineOption options)
+    void SetOptions(Microsoft.PowerShell.SetPSReadLineOption options)
 
-        This function is a helper method used by the cmdlet Set-PSReadlineOption, but might be
+        This function is a helper method used by the cmdlet Set-PSReadLineOption, but might be
         useful to a custom key binding that wants to temporarily change a setting.
 
     bool TryGetArgAsInt(System.Object arg, [ref] int numericArg, int defaultNumericArg)
@@ -610,12 +1249,12 @@ LONG DESCRIPTION
 
 POWERSHELL COMPATIBILITY
 
-    PSReadline requires PowerShell version 3 or greater and the console host.  It
+    PSReadLine requires PowerShell version 3 or greater and the console host.  It
     will not work in the ISE.
 
 FEEDBACK
 
-    https://github.com/lzybkr/PSReadline
+    https://github.com/PowerShell/PSReadLine
 
 CONTRIBUTING TO PSREADLINE
 
@@ -623,6 +1262,6 @@ CONTRIBUTING TO PSREADLINE
 
 SEE ALSO
 
-    PSReadline is heavily influenced by the GNU Readline library:
+    PSReadLine is heavily influenced by the GNU readline library:
 
         http://tiswww.case.edu/php/chet/readline/rltop.html

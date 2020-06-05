@@ -24,7 +24,7 @@ Param()
   }
 
   Import-Module Posh-Git
-  Start-SshAgent -Quiet
+  #Start-SshAgent -Quiet
 
   # We prefer hub.exe to git.exe, if available
   if (Get-Command "hub.exe" -ErrorAction SilentlyContinue)

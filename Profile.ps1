@@ -57,79 +57,10 @@ set-alias vi         vim.exe
 # ---------------------------------------------------------------------------
 # Visuals
 # ---------------------------------------------------------------------------
-set-variable -Scope Global WindowTitle ''
-
-function ShouldRepoBeExcludedForGitStatus
-{
-	# Personal preference: ignore any directory under %INETROOT%, as these are VERY large Git repos
-	$local:inetRoot = $null
-	if (Test-Path env:\INETROOT)
-	{
-		$local:inetRoot = $(get-content env:\INETROOT)
-	}
-	
-	if ($local:inetRoot)
-	{
-		$local:inetRoot = $local:inetRoot.ToLower()
-		$local:currentDir = (get-location).Path.ToLower()
-		
-		return $local:currentDir.StartsWith($local:inetRoot)
-	}
-	
-	return $false
-}
-
-function prompt
-{
-	$local:pathObj = (get-location)
-	$local:path    = $pathObj.Path
-	$local:drive   = $pathObj.Drive.Name
-
-	if(!$drive) # if there's no drive, it might be a special path (eg, a UNC path)
-	{
-		if($path.contains('::')) # if it's a special path, get the provider's path name
-		{
-			$path = $pathObj.ProviderPath
-		}
-		if($path -match "^\\\\([^\\]+)\\") # if it's a UNC path, use the server name as the drive
-		{
-			$drive = $matches[1]
-		}
-	}
-	
-	$local:title = $path
-	if($WindowTitle) { $title += " - $WindowTitle" }
-
-	$host.ui.rawUi.windowTitle = $title
-	$path = [IO.Path]::GetFileName($path)
-	if(!$path) { $path = '\' }
-
-	if($NestedPromptLevel)
-	{
-		Write-Host -NoNewline -ForeGroundColor Green "$NestedPromptLevel-";
-	}
-	
-	$private:h = @(Get-History);
-	$private:nextCommand = $private:h[$private:h.Count - 1].Id + 1;
-	Write-Host -NoNewline -ForeGroundColor Red "${private:nextCommand}|";
-
-	Write-Host -NoNewline -ForeGroundColor Blue "${drive}";
-	Write-Host -NoNewline -ForeGroundColor White ":";
-	Write-Host -NoNewline -ForeGroundColor White "$path";
-	
-	# Show GIT Status, if loaded:
-	if (Get-Command "Write-VcsStatus" -ErrorAction SilentlyContinue)
-	{
-		if (!(ShouldRepoBeExcludedForGitStatus))
-		{
-			$realLASTEXITCODE = $LASTEXITCODE
-			Write-VcsStatus
-			$global:LASTEXITCODE = $realLASTEXITCODE
-		}
-	}
-
-	return ">";
-}
+$GitPromptSettings.DefaultPromptPrefix.Text = '$($( $(Get-History) | Select-Object -Last 1).Id + 1) '
+$GitPromptSettings.DefaultPromptPrefix.ForegroundColor = 'Gray';
+$GitPromptSettings.RepositoriesInWhichToDisableFileStatus = @("C:\Users\dolange\src\Griffin", "C:\Users\dolange\src\cortana\CoreScience")
+$GitPromptSettings.WindowTitle = $GitPromptSettings.WindowTitle = { param($GitStatus, [bool]$IsAdmin) "$(if ($IsAdmin) {'Admin: '})$(if ($GitStatus) {"$($GitStatus.RepoName) [$($GitStatus.Branch)]"} else {Get-PromptPath})" }
 
 # ---------------------------------------------------------------------------
 # Helper functions
