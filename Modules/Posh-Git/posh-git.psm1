@@ -1,115 +1,147 @@
-param([switch]$NoVersionWarn)
+param([bool]$ForcePoshGitPrompt, [bool]$UseLegacyTabExpansion)
 
-if (Get-Module posh-git) { return }
+. $PSScriptRoot\CheckRequirements.ps1 > $null
 
-$psv = $PSVersionTable.PSVersion
-
-if ($psv.Major -lt 3 -and !$NoVersionWarn) {
-    Write-Warning ("posh-git support for PowerShell 2.0 is deprecated; you have version $($psv).`n" +
-    "To download version 5.0, please visit https://www.microsoft.com/en-us/download/details.aspx?id=50395`n" +
-    "For more information and to discuss this, please visit https://github.com/dahlbyk/posh-git/issues/163`n" +
-    "To suppress this warning, change your profile to include 'Import-Module posh-git -Args `$true'.")
-}
-
-& $PSScriptRoot\CheckVersion.ps1 > $null
-
+. $PSScriptRoot\ConsoleMode.ps1
 . $PSScriptRoot\Utils.ps1
+. $PSScriptRoot\AnsiUtils.ps1
+. $PSScriptRoot\WindowTitle.ps1
+. $PSScriptRoot\PoshGitTypes.ps1
 . $PSScriptRoot\GitUtils.ps1
 . $PSScriptRoot\GitPrompt.ps1
+. $PSScriptRoot\GitParamTabExpansion.ps1
 . $PSScriptRoot\GitTabExpansion.ps1
 . $PSScriptRoot\TortoiseGit.ps1
 
-if (!$Env:HOME) { $Env:HOME = "$Env:HOMEDRIVE$Env:HOMEPATH" }
-if (!$Env:HOME) { $Env:HOME = "$Env:USERPROFILE" }
-
-Get-TempEnv 'SSH_AGENT_PID'
-Get-TempEnv 'SSH_AUTH_SOCK'
+$IsAdmin = Test-Administrator
 
 # Get the default prompt definition.
-if (($psv.Major -eq 2) -or ![Runspace]::DefaultRunspace.InitialSessionState.Commands) {
+$initialSessionState = [Runspace]::DefaultRunspace.InitialSessionState
+if (!$initialSessionState.Commands -or !$initialSessionState.Commands['prompt']) {
     $defaultPromptDef = "`$(if (test-path variable:/PSDebugContext) { '[DBG]: ' } else { '' }) + 'PS ' + `$(Get-Location) + `$(if (`$nestedpromptlevel -ge 1) { '>>' }) + '> '"
 }
 else {
-    $defaultPromptDef = [Runspace]::DefaultRunspace.InitialSessionState.Commands['prompt'].Definition
+    $defaultPromptDef = $initialSessionState.Commands['prompt'].Definition
 }
 
-# If there is no prompt function or the prompt function is the default, replace the current prompt function definition
-$poshGitPromptScriptBlock = $null
+# The built-in posh-git prompt function in ScriptBlock form.
+$GitPromptScriptBlock = {
+    $origDollarQuestion = $global:?
+    $origLastExitCode = $global:LASTEXITCODE
+
+    if (!$global:GitPromptValues) {
+        $global:GitPromptValues = [PoshGitPromptValues]::new()
+    }
+
+    $global:GitPromptValues.DollarQuestion = $origDollarQuestion
+    $global:GitPromptValues.LastExitCode = $origLastExitCode
+    $global:GitPromptValues.IsAdmin = $IsAdmin
+
+    $settings = $global:GitPromptSettings
+    if (!$settings) {
+        return "<`$GitPromptSettings not found> "
+    }
+
+    if ($settings.DefaultPromptEnableTiming) {
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    }
+
+    if ($settings.SetEnvColumns) {
+        # Set COLUMNS so git knows how wide the terminal is
+        $Env:COLUMNS = $Host.UI.RawUI.WindowSize.Width
+    }
+
+    # Construct/write the prompt text
+    $prompt = ''
+
+    # Write default prompt prefix
+    $prompt += Write-Prompt $settings.DefaultPromptPrefix.Expand()
+
+    # Get the current path - formatted correctly
+    $promptPath = $settings.DefaultPromptPath.Expand()
+
+    # Write the path and Git status summary information
+    if ($settings.DefaultPromptWriteStatusFirst) {
+        $prompt += Write-VcsStatus
+        $prompt += Write-Prompt $promptPath
+    }
+    else {
+        $prompt += Write-Prompt $promptPath
+        $prompt += Write-VcsStatus
+    }
+
+    # Write default prompt before suffix text
+    $prompt += Write-Prompt $settings.DefaultPromptBeforeSuffix.Expand()
+
+    # If stopped in the debugger, the prompt needs to indicate that by writing default propmt debug
+    if ((Test-Path Variable:/PSDebugContext) -or [runspace]::DefaultRunspace.Debugger.InBreakpoint) {
+        $prompt += Write-Prompt $settings.DefaultPromptDebug.Expand()
+    }
+
+    # Get the prompt suffix text
+    $promptSuffix = $settings.DefaultPromptSuffix.Expand()
+
+    # When using Write-Host, we return a single space from this function to prevent PowerShell from displaying "PS>"
+    # So to avoid two spaces at the end of the suffix, remove one here if it exists
+    if (!$settings.AnsiConsole -and $promptSuffix.Text.EndsWith(' ')) {
+        $promptSuffix.Text = $promptSuffix.Text.Substring(0, $promptSuffix.Text.Length - 1)
+    }
+
+    # This has to be *after* the call to Write-VcsStatus, which populates $global:GitStatus
+    Set-WindowTitle $global:GitStatus $IsAdmin
+
+    # If prompt timing enabled, write elapsed milliseconds
+    if ($settings.DefaultPromptEnableTiming) {
+        $timingInfo = [PoshGitTextSpan]::new($settings.DefaultPromptTimingFormat)
+        $sw.Stop()
+        $timingInfo.Text = $timingInfo.Text -f $sw.ElapsedMilliseconds
+        $prompt += Write-Prompt $timingInfo
+    }
+
+    $prompt += Write-Prompt $promptSuffix
+
+    # When using Write-Host, return at least a space to avoid "PS>" being unexpectedly displayed
+    if (!$settings.AnsiConsole) {
+        $prompt += " "
+    }
+    else {
+        # If using ANSI, set this global to help debug ANSI issues
+        $global:GitPromptValues.LastPrompt = EscapeAnsiString $prompt
+    }
+
+    $global:LASTEXITCODE = $origLastExitCode
+    $prompt
+}
 
 $currentPromptDef = if ($funcInfo = Get-Command prompt -ErrorAction SilentlyContinue) { $funcInfo.Definition }
+
+# If prompt matches pre-0.7 posh-git prompt, ignore it
+$collapsedLegacyPrompt = '$realLASTEXITCODE = $LASTEXITCODE;Write-Host($pwd.ProviderPath) -nonewline;Write-VcsStatus;$global:LASTEXITCODE = $realLASTEXITCODE;return "> "'
+if ($currentPromptDef -and (($currentPromptDef.Trim() -replace '[\r\n\t]+\s*',';') -eq $collapsedLegacyPrompt)) {
+    Write-Warning 'Replacing old posh-git prompt. Did you copy profile.example.ps1 into $PROFILE?'
+    $currentPromptDef = $null
+}
+
 if (!$currentPromptDef) {
     # HACK: If prompt is missing, create a global one we can overwrite with Set-Item
     function global:prompt { ' ' }
 }
 
-if (!$currentPromptDef -or ($currentPromptDef -eq $defaultPromptDef)) {
-    # Have to use [scriptblock]::Create() to get debugger detection to work in PS v2
-    $poshGitPromptScriptBlock = [scriptblock]::Create(@'
-        if ($GitPromptSettings.DefaultPromptEnableTiming) {
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        }
-        $origLastExitCode = $global:LASTEXITCODE
-
-        # A UNC path has no drive so it's better to use the ProviderPath e.g. "\\server\share".
-        # However for any path with a drive defined, it's better to use the Path property.
-        # In this case, ProviderPath is "\LocalMachine\My"" whereas Path is "Cert:\LocalMachine\My".
-        # The latter is more desirable.
-        $pathInfo = $ExecutionContext.SessionState.Path.CurrentLocation
-        $currentPath = if ($pathInfo.Drive) { $pathInfo.Path } else { $pathInfo.ProviderPath }
-
-        # File system paths are case-sensitive on Linux and case-insensitive on Windows and macOS
-        if (($PSVersionTable.PSVersion.Major -ge 6) -and $IsLinux) {
-            $stringComparison = [System.StringComparison]::Ordinal
-        }
-        else {
-            $stringComparison = [System.StringComparison]::OrdinalIgnoreCase
-        }
-
-        # Abbreviate path by replacing beginning of path with ~ *iff* the path is in the user's home dir
-        if ($currentPath -and $currentPath.StartsWith($Home, $stringComparison))
-        {
-            $currentPath = "~" + $currentPath.SubString($Home.Length)
-        }
-
-        # Write the abbreviated current path
-        Write-Host $currentPath -NoNewline
-
-        # Write the Git status summary information
-        Write-VcsStatus
-
-        # If stopped in the debugger, the prompt needs to indicate that in some fashion
-        $debugMode = (Test-Path Variable:/PSDebugContext) -or [runspace]::DefaultRunspace.Debugger.InBreakpoint
-        $promptSuffix = if ($debugMode) { $GitPromptSettings.DefaultPromptDebugSuffix } else { $GitPromptSettings.DefaultPromptSuffix }
-
-        # If user specifies $null or empty string, set to ' ' to avoid "PS>" unexpectedly being displayed
-        if (!$promptSuffix) {
-            $promptSuffix = ' '
-        }
-
-        $expandedPromptSuffix = $ExecutionContext.SessionState.InvokeCommand.ExpandString($promptSuffix)
-
-        # If prompt timing enabled, display elapsed milliseconds
-        if ($GitPromptSettings.DefaultPromptEnableTiming) {
-            $sw.Stop()
-            $elapsed = $sw.ElapsedMilliseconds
-            Write-Host " ${elapsed}ms" -NoNewline
-        }
-
-        $global:LASTEXITCODE = $origLastExitCode
-        $expandedPromptSuffix
-'@)
-
+# If there is no prompt function or the prompt function is the default, replace the current prompt function definition
+if ($ForcePoshGitPrompt -or !$currentPromptDef -or ($currentPromptDef -eq $defaultPromptDef)) {
     # Set the posh-git prompt as the default prompt
-    Set-Item Function:\prompt -Value $poshGitPromptScriptBlock
+    Set-Item Function:\prompt -Value $GitPromptScriptBlock
 }
 
 # Install handler for removal/unload of the module
 $ExecutionContext.SessionState.Module.OnRemove = {
     $global:VcsPromptStatuses = $global:VcsPromptStatuses | Where-Object { $_ -ne $PoshGitVcsPrompt }
 
+    Reset-WindowTitle
+
     # Check if the posh-git prompt function itself has been replaced. If so, do not restore the prompt function
     $promptDef = if ($funcInfo = Get-Command prompt -ErrorAction SilentlyContinue) { $funcInfo.Definition }
-    if ($promptDef -eq $poshGitPromptScriptBlock) {
+    if ($promptDef -eq $GitPromptScriptBlock) {
         Set-Item Function:\prompt -Value ([scriptblock]::Create($defaultPromptDef))
         return
     }
@@ -118,25 +150,32 @@ $ExecutionContext.SessionState.Module.OnRemove = {
 }
 
 $exportModuleMemberParams = @{
-    Alias = @('??') # TODO: Remove in 1.0.0
     Function = @(
-        'Invoke-NullCoalescing',
         'Add-PoshGitToProfile',
+        'Expand-GitCommand',
+        'Format-GitBranchName',
+        'Get-GitBranchStatusColor',
+        'Get-GitDirectory',
+        'Get-GitStatus',
+        'Get-PromptConnectionInfo',
+        'Get-PromptPath',
+        'New-GitPromptSettings',
+        'Remove-GitBranch',
+        'Update-AllBranches',
         'Write-GitStatus',
+        'Write-GitBranchName',
+        'Write-GitBranchStatus',
+        'Write-GitIndexStatus',
+        'Write-GitStashCount',
+        'Write-GitWorkingDirStatus',
+        'Write-GitWorkingDirStatusSummary',
         'Write-Prompt',
         'Write-VcsStatus',
-        'Get-GitStatus',
-        'Enable-GitColors',
-        'Get-GitDirectory',
         'TabExpansion',
-        'Get-AliasPattern',
-        'Get-SshAgent',
-        'Start-SshAgent',
-        'Stop-SshAgent',
-        'Add-SshKey',
-        'Get-SshPath',
-        'Update-AllBranches',
         'tgit'
+    )
+    Variable = @(
+        'GitPromptScriptBlock'
     )
 }
 

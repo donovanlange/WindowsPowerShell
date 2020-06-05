@@ -1,12 +1,61 @@
 # Inspired by Mark Embling
 # http://www.markembling.info/view/my-ideal-powershell-prompt-with-git-integration
 
+<#
+.SYNOPSIS
+    Gets the path to the current repository's .git dir.
+.DESCRIPTION
+    Gets the path to the current repository's .git dir.  Or if the repository
+    is a bare repository, the root directory of the bare repository.
+.EXAMPLE
+    PS C:\GitHub\posh-git\tests> Get-GitDirectory
+    Returns C:\GitHub\posh-git\.git
+.INPUTS
+    None.
+.OUTPUTS
+    System.String
+#>
 function Get-GitDirectory {
-    if ($Env:GIT_DIR) {
-        $Env:GIT_DIR
+    $pathInfo = Microsoft.PowerShell.Management\Get-Location
+    if (!$pathInfo -or ($pathInfo.Provider.Name -ne 'FileSystem')) {
+        $null
+    }
+    elseif ($Env:GIT_DIR) {
+        $Env:GIT_DIR -replace '\\|/', [System.IO.Path]::DirectorySeparatorChar
     }
     else {
-        Get-LocalOrParentPath .git
+        $currentDir = Get-Item -LiteralPath $pathInfo -Force
+        while ($currentDir) {
+            $gitDirPath = Join-Path $currentDir.FullName .git
+            if (Test-Path -LiteralPath $gitDirPath -PathType Container) {
+                return $gitDirPath
+            }
+
+            # Handle the worktree case where .git is a file
+            if (Test-Path -LiteralPath $gitDirPath -PathType Leaf) {
+                $gitDirPath = Invoke-Utf8ConsoleCommand { git rev-parse --git-dir 2>$null }
+                if ($gitDirPath) {
+                    return $gitDirPath
+                }
+            }
+
+            $headPath = Join-Path $currentDir.FullName HEAD
+            if (Test-Path -LiteralPath $headPath -PathType Leaf) {
+                $refsPath = Join-Path $currentDir.FullName refs
+                $objsPath = Join-Path $currentDir.FullName objects
+                if ((Test-Path -LiteralPath $refsPath -PathType Container) -and
+                    (Test-Path -LiteralPath $objsPath -PathType Container)) {
+
+                    $bareDir = Invoke-Utf8ConsoleCommand { git rev-parse --git-dir 2>$null }
+                    if ($bareDir -and (Test-Path -LiteralPath $bareDir -PathType Container)) {
+                        $resolvedBareDir = (Resolve-Path $bareDir).Path
+                        return $resolvedBareDir
+                    }
+                }
+            }
+
+            $currentDir = $currentDir.Parent
+        }
     }
 }
 
@@ -16,41 +65,51 @@ function Get-GitBranch($gitDir = $(Get-GitDirectory), [Diagnostics.Stopwatch]$sw
     Invoke-Utf8ConsoleCommand {
         dbg 'Finding branch' $sw
         $r = ''; $b = ''; $c = ''
-        if (Test-Path $gitDir\rebase-merge\interactive) {
-            dbg 'Found rebase-merge\interactive' $sw
-            $r = '|REBASE-i'
-            $b = "$(Get-Content $gitDir\rebase-merge\head-name)"
-        }
-        elseif (Test-Path $gitDir\rebase-merge) {
+        $step = ''; $total = ''
+        if (Test-Path $gitDir/rebase-merge) {
             dbg 'Found rebase-merge' $sw
-            $r = '|REBASE-m'
-            $b = "$(Get-Content $gitDir\rebase-merge\head-name)"
+            if (Test-Path $gitDir/rebase-merge/interactive) {
+                dbg 'Found rebase-merge/interactive' $sw
+                $r = '|REBASE-i'
+            }
+            else {
+                $r = '|REBASE-m'
+            }
+            $b = "$(Get-Content $gitDir/rebase-merge/head-name)"
+            $step = "$(Get-Content $gitDir/rebase-merge/msgnum)"
+            $total = "$(Get-Content $gitDir/rebase-merge/end)"
         }
         else {
-            if (Test-Path $gitDir\rebase-apply) {
+            if (Test-Path $gitDir/rebase-apply) {
                 dbg 'Found rebase-apply' $sw
-                if (Test-Path $gitDir\rebase-apply\rebasing) {
-                    dbg 'Found rebase-apply\rebasing' $sw
+                $step = "$(Get-Content $gitDir/rebase-apply/next)"
+                $total = "$(Get-Content $gitDir/rebase-apply/last)"
+
+                if (Test-Path $gitDir/rebase-apply/rebasing) {
+                    dbg 'Found rebase-apply/rebasing' $sw
                     $r = '|REBASE'
                 }
-                elseif (Test-Path $gitDir\rebase-apply\applying) {
-                    dbg 'Found rebase-apply\applying' $sw
+                elseif (Test-Path $gitDir/rebase-apply/applying) {
+                    dbg 'Found rebase-apply/applying' $sw
                     $r = '|AM'
                 }
                 else {
-                    dbg 'Found rebase-apply' $sw
                     $r = '|AM/REBASE'
                 }
             }
-            elseif (Test-Path $gitDir\MERGE_HEAD) {
+            elseif (Test-Path $gitDir/MERGE_HEAD) {
                 dbg 'Found MERGE_HEAD' $sw
                 $r = '|MERGING'
             }
-            elseif (Test-Path $gitDir\CHERRY_PICK_HEAD) {
+            elseif (Test-Path $gitDir/CHERRY_PICK_HEAD) {
                 dbg 'Found CHERRY_PICK_HEAD' $sw
                 $r = '|CHERRY-PICKING'
             }
-            elseif (Test-Path $gitDir\BISECT_LOG) {
+            elseif (Test-Path $gitDir/REVERT_HEAD) {
+                dbg 'Found REVERT_HEAD' $sw
+                $r = '|REVERTING'
+            }
+            elseif (Test-Path $gitDir/BISECT_LOG) {
                 dbg 'Found BISECT_LOG' $sw
                 $r = '|BISECTING'
             }
@@ -71,9 +130,9 @@ function Get-GitBranch($gitDir = $(Get-GitDirectory), [Diagnostics.Stopwatch]$sw
                         dbg 'Falling back on parsing HEAD' $sw
                         $ref = $null
 
-                        if (Test-Path $gitDir\HEAD) {
-                            dbg 'Reading from .git\HEAD' $sw
-                            $ref = Get-Content $gitDir\HEAD 2>$null
+                        if (Test-Path $gitDir/HEAD) {
+                            dbg 'Reading from .git/HEAD' $sw
+                            $ref = Get-Content $gitDir/HEAD 2>$null
                         }
                         else {
                             dbg 'Trying rev-parse' $sw
@@ -104,6 +163,10 @@ function Get-GitBranch($gitDir = $(Get-GitDirectory), [Diagnostics.Stopwatch]$sw
             }
         }
 
+        if ($step -and $total) {
+            $r += " $step/$total"
+        }
+
         "$c$($b -replace 'refs/heads/','')$r"
     }
 }
@@ -122,11 +185,44 @@ function GetUniquePaths($pathCollections) {
 
 $castStringSeq = [Linq.Enumerable].GetMethod("Cast").MakeGenericMethod([string])
 
-function Get-GitStatus($gitDir = (Get-GitDirectory)) {
-    $settings = $Global:GitPromptSettings
-    $enabled = (-not $settings) -or $settings.EnablePromptStatus
-    if ($enabled -and $gitDir) {
-        if($settings.Debug) {
+<#
+.SYNOPSIS
+    Gets a Git status object that is used by Write-GitStatus.
+.DESCRIPTION
+    Gets a Git status object that is used by Write-GitStatus.
+    The status object provides the information to be displayed in the various
+    sections of the posh-git prompt.
+.EXAMPLE
+    PS C:\> $s = Get-GitStatus; Write-GitStatus $s
+    Gets a Git status object. Then passes the object to Write-GitStatus which
+    writes out a posh-git prompt (or returns a string in ANSI mode) with the
+    information contained in the status object.
+.INPUTS
+    None
+.OUTPUTS
+    System.Management.Automation.PSObject
+.LINK
+    Write-GitStatus
+#>
+function Get-GitStatus {
+    param(
+        # The path of a directory within a Git repository that you want to get
+        # the Git status.
+        [Parameter(Position=0)]
+        $GitDir = (Get-GitDirectory),
+
+        # If specified, overrides $GitPromptSettings.EnableFileStatus and
+        # $GitPromptSettings.EnablePromptStatus when they are set to $false.
+        [Parameter()]
+        [switch]
+        $Force
+    )
+
+    $settings = if ($global:GitPromptSettings) { $global:GitPromptSettings } else { [PoshGitPromptSettings]::new() }
+
+    $promptStatusEnabled = $Force -or $settings.EnablePromptStatus
+    if ($promptStatusEnabled -and $GitDir) {
+        if ($settings.Debug) {
             $sw = [Diagnostics.Stopwatch]::StartNew(); Write-Host ''
         }
         else {
@@ -147,9 +243,10 @@ function Get-GitStatus($gitDir = (Get-GitDirectory)) {
         $filesUnmerged = New-Object System.Collections.Generic.List[string]
         $stashCount = 0
 
-        if($settings.EnableFileStatus -and !$(InDisabledRepository)) {
-            if ($settings.EnableFileStatusFromCache -eq $null) {
-                $settings.EnableFileStatusFromCache = (Get-Module GitStatusCachePoshClient) -ne $null
+        $fileStatusEnabled = $Force -or $settings.EnableFileStatus
+        if ($fileStatusEnabled -and !$(InDotGitOrBareRepoDir $GitDir) -and !$(InDisabledRepository)) {
+            if ($null -eq $settings.EnableFileStatusFromCache) {
+                $settings.EnableFileStatusFromCache = $null -ne (Get-Module GitStatusCachePoshClient)
             }
 
             if ($settings.EnableFileStatusFromCache) {
@@ -181,10 +278,16 @@ function Get-GitStatus($gitDir = (Get-GitDirectory)) {
 
                 if ($cacheResponse.Stashes) { $stashCount = $cacheResponse.Stashes.Length }
                 if ($cacheResponse.State) { $branch += "|" + $cacheResponse.State }
-            } else {
+            }
+            else {
                 dbg 'Getting status' $sw
-                $status = Invoke-Utf8ConsoleCommand { git -c color.status=false status --short --branch 2>$null }
-                if($settings.EnableStashStatus) {
+                switch ($settings.UntrackedFilesMode) {
+                    "No"      { $untrackedFilesOption = "-uno" }
+                    "All"     { $untrackedFilesOption = "-uall" }
+                    "Normal"  { $untrackedFilesOption = "-unormal" }
+                }
+                $status = Invoke-Utf8ConsoleCommand { git -c core.quotepath=false -c color.status=false status $untrackedFilesOption --short --branch 2>$null }
+                if ($settings.EnableStashStatus) {
                     dbg 'Getting stash count' $sw
                     $stashCount = $null | git stash list 2>$null | measure-object | Select-Object -expand Count
                 }
@@ -231,34 +334,34 @@ function Get-GitStatus($gitDir = (Get-GitDirectory)) {
                     }
 
                     default { if ($sw) { dbg "Status: $_" $sw } }
-
                 }
             }
         }
 
-        if(!$branch) { $branch = Get-GitBranch $gitDir $sw }
+        if (!$branch) { $branch = Get-GitBranch $GitDir $sw }
 
         dbg 'Building status object' $sw
-        #
+
         # This collection is used twice, so create the array just once
         $filesAdded = $filesAdded.ToArray()
 
         $indexPaths = @(GetUniquePaths $indexAdded,$indexModified,$indexDeleted,$indexUnmerged)
         $workingPaths = @(GetUniquePaths $filesAdded,$filesModified,$filesDeleted,$filesUnmerged)
         $index = (,$indexPaths) |
-            Add-Member -PassThru NoteProperty Added    $indexAdded.ToArray() |
-            Add-Member -PassThru NoteProperty Modified $indexModified.ToArray() |
-            Add-Member -PassThru NoteProperty Deleted  $indexDeleted.ToArray() |
-            Add-Member -PassThru NoteProperty Unmerged $indexUnmerged.ToArray()
+            Add-Member -Force -PassThru NoteProperty Added    $indexAdded.ToArray() |
+            Add-Member -Force -PassThru NoteProperty Modified $indexModified.ToArray() |
+            Add-Member -Force -PassThru NoteProperty Deleted  $indexDeleted.ToArray() |
+            Add-Member -Force -PassThru NoteProperty Unmerged $indexUnmerged.ToArray()
 
         $working = (,$workingPaths) |
-            Add-Member -PassThru NoteProperty Added    $filesAdded |
-            Add-Member -PassThru NoteProperty Modified $filesModified.ToArray() |
-            Add-Member -PassThru NoteProperty Deleted  $filesDeleted.ToArray() |
-            Add-Member -PassThru NoteProperty Unmerged $filesUnmerged.ToArray()
+            Add-Member -Force -PassThru NoteProperty Added    $filesAdded |
+            Add-Member -Force -PassThru NoteProperty Modified $filesModified.ToArray() |
+            Add-Member -Force -PassThru NoteProperty Deleted  $filesDeleted.ToArray() |
+            Add-Member -Force -PassThru NoteProperty Unmerged $filesUnmerged.ToArray()
 
         $result = New-Object PSObject -Property @{
-            GitDir          = $gitDir
+            GitDir          = $GitDir
+            RepoName        = Split-Path (Split-Path $GitDir -Parent) -Leaf
             Branch          = $branch
             AheadBy         = $aheadBy
             BehindBy        = $behindBy
@@ -273,7 +376,7 @@ function Get-GitStatus($gitDir = (Get-GitDirectory)) {
         }
 
         dbg 'Finished' $sw
-        if($sw) { $sw.Stop() }
+        if ($sw) { $sw.Stop() }
         return $result
     }
 }
@@ -290,224 +393,174 @@ function InDisabledRepository {
     return $false
 }
 
-function Enable-GitColors {
-    Write-Warning 'Enable-GitColors is Obsolete and will be removed in a future version of posh-git.'
+function InDotGitOrBareRepoDir([string][ValidateNotNullOrEmpty()]$GitDir) {
+    # A UNC path has no drive so it's better to use the ProviderPath e.g. "\\server\share".
+    # However for any path with a drive defined, it's better to use the Path property.
+    # In this case, ProviderPath is "\LocalMachine\My"" whereas Path is "Cert:\LocalMachine\My".
+    # The latter is more desirable.
+    $pathInfo = Microsoft.PowerShell.Management\Get-Location
+    $currentPath = if ($pathInfo.Drive) { $pathInfo.Path } else { $pathInfo.ProviderPath }
+    $res = $currentPath.StartsWith($GitDir, (Get-PathStringComparison))
+    $res
 }
 
-function Get-AliasPattern($exe) {
-   $aliases = @($exe) + @(Get-Alias | Where-Object { $_.Definition -eq $exe } | Select-Object -Exp Name)
+function Get-AliasPattern($cmd) {
+    $aliases = @($cmd) + @(Get-Alias | Where-Object { $_.Definition -eq $cmd } | Select-Object -Exp Name)
    "($($aliases -join '|'))"
-}
-
-function setenv($key, $value) {
-    [void][Environment]::SetEnvironmentVariable($key, $value)
-    Set-TempEnv $key $value
-}
-
-function Get-TempEnv($key) {
-    $path = Get-TempEnvPath($key)
-    if (Test-Path $path) {
-        $value =  Get-Content $path
-        [void][Environment]::SetEnvironmentVariable($key, $value)
-    }
-}
-
-function Set-TempEnv($key, $value) {
-    $path = Get-TempEnvPath($key)
-    if ($value -eq $null) {
-        if (Test-Path $path) {
-            Remove-Item $path
-        }
-    }
-    else {
-        New-Item $path -Force -ItemType File > $null
-        $value | Out-File -FilePath $path -Encoding ascii -Force
-    }
-}
-
-function Get-TempEnvPath($key){
-    $path = Join-Path ([System.IO.Path]::GetTempPath()) ".ssh\$key.env"
-    return $path
-}
-
-# Retrieve the current SSH agent PID (or zero). Can be used to determine if there
-# is a running agent.
-function Get-SshAgent() {
-    if ($env:GIT_SSH -imatch 'plink') {
-        $pageantPid = Get-Process | Where-Object { $_.Name -eq 'pageant' } | Select-Object -ExpandProperty Id -First 1
-        if ($null -ne $pageantPid) { return $pageantPid }
-    }
-    else {
-        $agentPid = $Env:SSH_AGENT_PID
-        if ($agentPid) {
-            $sshAgentProcess = Get-Process | Where-Object { ($_.Id -eq $agentPid) -and ($_.Name -eq 'ssh-agent') }
-            if ($null -ne $sshAgentProcess) {
-                return $agentPid
-            }
-            else {
-                setenv 'SSH_AGENT_PID' $null
-                setenv 'SSH_AUTH_SOCK' $null
-            }
-        }
-    }
-
-    return 0
-}
-
-# Attempt to guess Pageant's location
-function Find-Pageant() {
-    Write-Verbose "Pageant not in path. Trying to guess location."
-
-    $gitSsh = $env:GIT_SSH
-    if ($gitSsh -and (test-path $gitSsh)) {
-        $pageant = join-path (split-path $gitSsh) pageant
-    }
-
-    if (!(get-command $pageant -Erroraction SilentlyContinue)) {
-        return # Guessing failed.
-    }
-    else {
-        return $pageant
-    }
-}
-
-# Attempt to guess $program's location. For ssh-agent/ssh-add.
-function Find-Ssh($program = 'ssh-agent') {
-    Write-Verbose "$program not in path. Trying to guess location."
-    $gitItem = Get-Command git -Erroraction SilentlyContinue | Get-Item
-    if ($null -eq $gitItem) {
-        Write-Warning 'git not in path'
-        return
-    }
-
-    $sshLocation = join-path $gitItem.directory.parent.fullname bin/$program
-    if (get-command $sshLocation -Erroraction SilentlyContinue) {
-        return $sshLocation
-    }
-
-    $sshLocation = join-path $gitItem.directory.parent.fullname usr/bin/$program
-    if (get-command $sshLocation -Erroraction SilentlyContinue) {
-        return $sshLocation
-    }
-}
-
-# Loosely based on bash script from http://help.github.com/ssh-key-passphrases/
-function Start-SshAgent([switch]$Quiet) {
-    [int]$agentPid = Get-SshAgent
-    if ($agentPid -gt 0) {
-        if (!$Quiet) {
-            $agentName = Get-Process -Id $agentPid | Select-Object -ExpandProperty Name
-            if (!$agentName) { $agentName = "SSH Agent" }
-            Write-Host "$agentName is already running (pid $($agentPid))"
-        }
-        return
-    }
-
-    if ($env:GIT_SSH -imatch 'plink') {
-        Write-Host "GIT_SSH set to $($env:GIT_SSH), using Pageant as SSH agent."
-
-        $pageant = Get-Command pageant -TotalCount 1 -Erroraction SilentlyContinue
-        $pageant = if ($pageant) { $pageant } else { Find-Pageant }
-        if (!$pageant) {
-            Write-Warning "Could not find Pageant."
-            return
-        }
-
-        Start-Process -NoNewWindow $pageant
-    }
-    else {
-        $sshAgent = Get-Command ssh-agent -TotalCount 1 -ErrorAction SilentlyContinue
-        $sshAgent = if ($sshAgent) { $sshAgent } else { Find-Ssh('ssh-agent') }
-        if (!$sshAgent) {
-            Write-Warning 'Could not find ssh-agent'
-            return
-        }
-
-        & $sshAgent | ForEach-Object {
-            if ($_ -match '(?<key>[^=]+)=(?<value>[^;]+);') {
-                setenv $Matches['key'] $Matches['value']
-            }
-        }
-    }
-
-    Add-SshKey
-}
-
-function Get-SshPath($File = 'id_rsa') {
-    # Avoid paths with path separator char since it is different on Linux/macOS.
-    # Also avoid ~ as it is invalid if the user is cd'd into say cert:\ or hklm:\.
-    # Also, apparently using the PowerShell built-in $HOME variable may not cut it for msysGit with has different
-    # ideas about the path to the user's home dir e.g. /c/Users/Keith
-    $homePath = Invoke-NullCoalescing $Env:HOME $Home
-    Join-Path $homePath (Join-Path .ssh $File)
 }
 
 <#
 .SYNOPSIS
-    Add a key to the SSH agent
+    Deletes the specified Git branches.
 .DESCRIPTION
-    Adds one or more SSH keys to the SSH agent.
-.EXAMPLE
-    PS C:\> Add-SshKey
-    Adds ~\.ssh\id_rsa to the SSH agent.
-.EXAMPLE
-    PS C:\> Add-SshKey ~\.ssh\mykey, ~\.ssh\myotherkey
-    Adds ~\.ssh\mykey and ~\.ssh\myotherkey to the SSH agent.
-.INPUTS
-    None.
-    You cannot pipe input to this cmdlet.
-#>
-function Add-SshKey() {
-    if ($env:GIT_SSH -imatch 'plink') {
-        $pageant = Get-Command pageant -Erroraction SilentlyContinue | Select-Object -First 1 -ExpandProperty Name
-        $pageant = if ($pageant) { $pageant } else { Find-Pageant }
-        if (!$pageant) {
-            Write-Warning 'Could not find Pageant'
-            return
-        }
+    Deletes the specified Git branches that have been merged into the commit specified by the Commit parameter (HEAD by default). You must either specify a branch name via the Name parameter, which accepts wildard characters, or via the Pattern parameter, which accepts a regular expression.
 
-        if ($args.Count -eq 0) {
-            $keyPath = Join-Path $Env:HOME .ssh
-            $keys = Get-ChildItem $keyPath/*.ppk -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-            & $pageant $keys
-        }
-        else {
-            foreach ($value in $args) {
-                & $pageant $value
-            }
-        }
+    The following branches are always excluded from deletion:
+
+    * The current branch
+    * develop
+    * master
+
+    The default set of excluded branches can be overridden with the ExcludePattern parameter.
+
+    Consider always running this command FIRST with the WhatIf parameter. This will show you which branches will be deleted. This gives you a chance to adjust your branch name wildcard pattern or regular expression if you are using the Pattern parameter.
+
+    IMPORTANT: Be careful using this command. Even though by default this command deletes only merged branches, most, if not all, of your historical branches have been merged. But that doesn't mean you want to delete them. That is why this command excludes `develop` and `master` by default. But you may use different names e.g. `development` or have other historical branches you don't want to delete. In these cases, you can either:
+
+    * Specify a narrower branch name wildcard such as "user/$env:USERNAME/*".
+    * Specify an updated ExcludeParameter e.g. '(^\*)|(^. (develop|master|v\d+)$)' which adds any branch matching the pattern 'v\d+' to the exclusion list.
+
+    If necessary, you can delete the specified branches REGARDLESS of their merge status by using the IncludeUnmerged parameter. BE VERY CAREFUL using the IncludeUnmerged parameter together with the Force parameter, since you will not be given the opportunity to confirm each branch deletion.
+
+    The following Git commands are executed by this command:
+
+        git branch --merged $Commit |
+            Where-Object { $_ -notmatch $ExcludePattern } |
+            Where-Object { $_.Trim() -like $Name } |
+            Foreach-Object { git branch --delete $_.Trim() }
+
+    If the IncludeUnmerged parameter is specified, execution changes to:
+
+        git branch |
+            Where-Object { $_ -notmatch $ExcludePattern } |
+            Where-Object { $_.Trim() -like $Name } |
+            Foreach-Object { git branch --delete $_.Trim() }
+
+    If the DeleteForce parameter is specified, the Foreach-Object changes to:
+
+        Foreach-Object { git branch --delete --force $_.Trim() }
+
+    If the Pattern parameter is used instead of the Name parameter, the second Where-Object changes to:
+
+        Where-Object { $_ -match $Pattern }
+
+    Recovering Deleted Branches
+
+    If you wind up deleting a branch you didn't intend to, you can easily recover it with the info provided by Git during the delete. For instance, let's say you realized you didn't want to delete the branch 'feature/exp1'. In the output of this command, you should see a deletion entry for this branch that looks like:
+
+        Deleted branch feature/exp1 (was 08f9000).
+
+    To recover this branch, execute the following Git command:
+
+        # git branch <branch-name> <sha1>
+        git branch feature/exp1 08f9000
+.EXAMPLE
+    PS> Remove-GitBranch -Name "user/${env:USERNAME}/*" -WhatIf
+    Shows the merged branches that would be deleted by the specified branch name without actually deleting. Remove the WhatIf parameter when you are happy with the list of branches that will be deleted.
+.EXAMPLE
+    PS> Remove-GitBranch "feature/*" -Force
+    Deletes the merged branches that match the specified wildcard. Using the Force parameter skips all confirmation prompts. Name is a positional parameter. The first argument is assumed to be the value of the Name parameter.
+.EXAMPLE
+    PS> Remove-GitBranch "bugfix/*" -Force -DeleteForce
+    Deletes the merged branches that match the specified wildcard. Using the Force parameter skips all confirmation prompts while the DeleteForce parameter uses the --force option in the underlying Git command.
+.EXAMPLE
+    PS> Remove-GitBranch -Pattern 'user/(dahlbyk|hillr)/.*'
+    Deletes the merged branches that match the specified regular expression.
+.EXAMPLE
+    PS> Remove-GitBranch -Name * -ExcludePattern '(^\*)|(^. (develop|master|v\d+)$)'
+    Deletes merged branches except the current branch, develop, master and branches that also match the pattern 'v\d+' e.g. v1, v1.0, v1.x. BE VERY CAREFUL SPECIYING SUCH A BROAD BRANCH NAME WILDCARD!
+.EXAMPLE
+    PS> Remove-GitBranch "feature/*" -IncludeUnmerged -WhatIf
+    Shows the branches, both merged and unmerged, that match the specified wildcard that would be deleted without actually deleting them. Once you've verified the list of branches looks correct, remove the WhatIf parameter to actually delete the branches.
+#>
+function Remove-GitBranch {
+    [CmdletBinding(DefaultParameterSetName="Wildcard", SupportsShouldProcess, ConfirmImpact="Medium")]
+    param(
+        # Specifies a regular expression pattern for the branches that will be deleted. Certain branches are always excluded from deletion e.g. the current branch as well as the develop and master branches. See the ExcludePattern parameter to modify that pattern.
+        [Parameter(Position=0, Mandatory, ParameterSetName="Wildcard")]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Name,
+
+        # Specifies a regular expression for the branches that will be deleted. Certain branches are always excluded from deletion e.g. the current branch as well as the develop and master branches. See the ExcludePattern parameter to modify that pattern.
+        [Parameter(Position=0, Mandatory, ParameterSetName="Pattern")]
+        [ValidateNotNull()]
+        [string]
+        $Pattern,
+
+        # Specifies a regular expression used to exclude merged branches from being deleted. The default pattern excludes the current branch, develop and master branches.
+        [Parameter()]
+        [ValidateNotNull()]
+        [string]
+        $ExcludePattern = '(^\*)|(^. (develop|master)$)',
+
+        # Branches whose tips are reachable from the specified commit will be deleted. The default commit is HEAD. This parameter is ignored if the IncludeUnmerged parameter is specified.
+        [Parameter()]
+        [string]
+        $Commit = "HEAD",
+
+        # Specifies that unmerged branches are also eligible to be deleted.
+        [Parameter()]
+        [switch]
+        $IncludeUnmerged,
+
+        # Deletes the specified branches without prompting for confirmation. By default, Remove-GitBranch prompts for confirmation before deleting branches.
+        [Parameter()]
+        [switch]
+        $Force,
+
+        # Deletes the specified branches by adding the --force parameter to the git branch --delete command e.g. git branch --delete --force <branch-name>. This is also the equivalent of using the -D parameter on the git branch command.
+        [Parameter()]
+        [switch]
+        $DeleteForce
+    )
+
+    if ($IncludeUnmerged) {
+        $branches = git branch
     }
     else {
-        $sshAdd = Get-Command ssh-add -TotalCount 1 -ErrorAction SilentlyContinue
-        $sshAdd = if ($sshAdd) { $sshAdd } else { Find-Ssh('ssh-add') }
-        if (!$sshAdd) {
-            Write-Warning 'Could not find ssh-add'
-            return
-        }
+        $branches = git branch --merged $Commit
+    }
 
-        if ($args.Count -eq 0) {
-            & $sshAdd
-        }
-        else {
-            foreach ($value in $args) {
-                & $sshAdd $value
+    $filteredBranches = $branches | Where-Object {$_ -notmatch $ExcludePattern }
+
+    if ($PSCmdlet.ParameterSetName -eq "Wildcard") {
+        $branchesToDelete = $filteredBranches | Where-Object { $_.Trim() -like $Name }
+    }
+    else {
+        $branchesToDelete = $filteredBranches | Where-Object { $_ -match $Pattern }
+    }
+
+    $action = if ($DeleteForce) { "delete with force"} else { "delete" }
+    $yesToAll = $noToAll = $false
+
+    foreach ($branch in $branchesToDelete) {
+        $targetBranch = $branch.Trim()
+        if ($PSCmdlet.ShouldProcess($targetBranch, $action)) {
+            if ($Force -or $yesToAll -or
+                $PSCmdlet.ShouldContinue("Are you REALLY sure you want to $action `"$targetBranch`"?",
+                                         "Confirm branch deletion", [ref]$yesToAll, [ref]$noToAll)) {
+
+                if ($noToAll) { return }
+
+                if ($DeleteForce) {
+                    Invoke-Utf8ConsoleCommand { git branch --delete --force $targetBranch }
+                }
+                else {
+                    Invoke-Utf8ConsoleCommand { git branch --delete $targetBranch }
+                }
             }
         }
-    }
-}
-
-# Stop a running SSH agent
-function Stop-SshAgent() {
-    [int]$agentPid = Get-SshAgent
-    if ($agentPid -gt 0) {
-        # Stop agent process
-        $proc = Get-Process -Id $agentPid -ErrorAction SilentlyContinue
-        if ($null -ne $proc) {
-            Stop-Process $agentPid
-        }
-
-        setenv 'SSH_AGENT_PID' $null
-        setenv 'SSH_AUTH_SOCK' $null
     }
 }
 
@@ -525,5 +578,6 @@ function Update-AllBranches($Upstream = 'master', [switch]$Quiet) {
             Write-Warning "Rebase failed for $branch"
         }
     }
+
     git checkout -q $head
 }
