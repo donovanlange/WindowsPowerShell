@@ -11,7 +11,7 @@
           "foreground": "#ffffff",
           "background": "#33658A",
           "leading_diamond": "\uE0B6",
-          "trailing_diamond": "\uE0B0"
+          "trailing_diamond": ""
         },
         {
           "type": "path",
