@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "os",
+          "style": "diamond",
+          "foreground": "#ffffff",
+          "background": "#33658A",
+          "leading_diamond": "\uE0B6",
+          "trailing_diamond": "\uE0B0"
+        },
+        {
+          "type": "path",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "#ffffff",
+          "background": "#61AFEF",
+          "properties": {
+            "style": "full"
+          }
+        },
+        {
+          "type": "git",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "#193549",
+          "background": "#9A348E",
+          "properties": {
+            "display_status": true,
+            "display_stash_count": true,
+            "display_upstream_icon": true,
+            "local_changes_color": "#C678DD",
+            "working_color": "#FF6471",
+            "staging_color": "#95ffa4",
+            "ahead_color": "#2EC4B6",
+            "behind_color": "#8A4FFF"
+          }
+        },
+        {
+          "type": "python",
+          "style": "diamond",
+          "foreground": "#ffffff",
+          "background": "#FF6471",
+          "leading_diamond": "",
+          "trailing_diamond": "\uE0B4",
+          "properties": {
+            "prefix": "<transparent>\uE0B0 </>"
+          }
+        }
+      ]
+    }
+  ],
+  "final_space": true
+}

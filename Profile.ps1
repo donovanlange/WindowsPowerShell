@@ -32,13 +32,11 @@ if ($host.Name -eq 'ConsoleHost')
 # Ctrl-R.
 Import-Module PSFzf -ArgumentList 'Ctrl+T','Ctrl+R'
 
-# Git support
-Import-Module Git
-Initialize-Git
-Import-Module Posh-Git
+Import-Module oh-my-posh
+Set-PoshPrompt -Theme "$(Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)\.MyPoshTheme.omp.json"
 
 # Colorize directory output
-Import-Module PSColor
+Import-Module Terminal-Icons
 
 # Utils
 Import-Module StreamUtils
@@ -53,14 +51,6 @@ set-alias mo         measure-object
 set-alias eval       invoke-expression
 set-alias n          vim.exe
 set-alias vi         vim.exe
-
-# ---------------------------------------------------------------------------
-# Visuals
-# ---------------------------------------------------------------------------
-$GitPromptSettings.DefaultPromptPrefix.Text = '$($( $(Get-History) | Select-Object -Last 1).Id + 1) '
-$GitPromptSettings.DefaultPromptPrefix.ForegroundColor = 'Gray';
-$GitPromptSettings.RepositoriesInWhichToDisableFileStatus = @("C:\Users\dolange\src\Griffin", "C:\Users\dolange\src\cortana\CoreScience")
-$GitPromptSettings.WindowTitle = $GitPromptSettings.WindowTitle = { param($GitStatus, [bool]$IsAdmin) "$(if ($IsAdmin) {'Admin: '})$(if ($GitStatus) {"$($GitStatus.RepoName) [$($GitStatus.Branch)]"} else {Get-PromptPath})" }
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -108,3 +98,6 @@ function bcc
 {
 	build -Cc
 }
+
+# Workaround oh-my-posh rendering bug when Powershell is launched with -NoLogo
+cls
