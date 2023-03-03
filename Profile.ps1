@@ -36,7 +36,10 @@ Import-Module oh-my-posh
 Set-PoshPrompt -Theme "$(Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)\.MyPoshTheme.omp.json"
 
 # Colorize directory output
-Import-Module Terminal-Icons
+if ($host.Name -eq 'ConsoleHost')
+{
+	Import-Module Terminal-Icons
+}
 
 # Utils
 Import-Module StreamUtils

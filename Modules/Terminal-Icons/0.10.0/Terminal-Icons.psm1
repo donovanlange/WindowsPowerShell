@@ -1,6 +1,19 @@
 
 using namespace System.Management.Automation
 using namespace System.Collections.ObjectModel
+
+if (!(Get-Command 'Import-PowerShellDataFile' -ErrorAction Ignore)) {
+    function Import-PowerShellDataFile {
+      [CmdletBinding()]
+      Param (
+          [Parameter(Mandatory = $true)]
+          [Microsoft.PowerShell.DesiredStateConfiguration.ArgumentToConfigurationDataTransformation()]
+          [hashtable] $Path
+      )
+      return $Path
+    } 
+} 
+
 function Add-Theme {
     [cmdletbinding(DefaultParameterSetName = 'Path', SupportsShouldProcess)]
     param(
@@ -222,14 +235,23 @@ function Import-Preferences {
         [string]$DefaultThemeName = $script:defaultTheme
     )
 
+    begin {
+        $defaultPrefs = @{
+            CurrentColorTheme = $DefaultThemeName
+            CurrentIconTheme  = $DefaultThemeName
+        }
+    }
+
     process {
         if (Test-Path $Path) {
-            Import-Clixml -Path $Path
-        } else {
-            @{
-                CurrentColorTheme = $DefaultThemeName
-                CurrentIconTheme  = $DefaultThemeName
+            try {
+                Import-Clixml -Path $Path -ErrorAction Stop
+            } catch {
+                Write-Warning "Unable to parse [$Path]. Setting default preferences."
+                $defaultPrefs
             }
+        } else {
+            $defaultPrefs
         }
     }
 }
@@ -290,73 +312,101 @@ function Resolve-Icon {
         switch ($FileInfo.LinkType) {
             # Determine symlink or junction icon and color
             'Junction' {
-                $iconName = $icons.Types.($type)['junction']
-                $colorSeq = $colors.Types.($type)['junction']
-                $displayInfo['Target'] = '  ' + $FileInfo.Target
+                if ($icons) {
+                    $iconName = $icons.Types.($type)['junction']
+                } else {
+                    $iconName = $null
+                }
+                if ($colors) {
+                    $colorSeq = $colors.Types.($type)['junction']
+                } else {
+                    $colorSet = $script:colorReset
+                }
+                $displayInfo['Target'] = ' ' + $glyphs['nf-mdi-arrow_right_thick'] + ' ' + $FileInfo.Target
                 break
             }
             'SymbolicLink' {
-                $iconName = $icons.Types.($type)['symlink']
-                $colorSeq = $colors.Types.($type)['symlink']
-                $displayInfo['Target'] = '  ' + $FileInfo.Target
+                if ($icons) {
+                    $iconName = $icons.Types.($type)['symlink']
+                } else {
+                    $iconName = $null
+                }
+                if ($colors) {
+                    $colorSeq = $colors.Types.($type)['symlink']
+                } else {
+                    $colorSet = $script:colorReset
+                }
+                $displayInfo['Target'] = ' ' + $glyphs['nf-mdi-arrow_right_thick'] + ' ' + $FileInfo.Target
                 break
             } default {
-                # Determine normal directory icon and color
-                $iconName = $icons.Types.$type.WellKnown[$FileInfo.Name]
-                if (-not $iconName) {
-                    if ($FileInfo.PSIsContainer) {
-                        $iconName = $icons.Types.$type[$FileInfo.Name]
-                    } elseif ($icons.Types.$type.ContainsKey($FileInfo.Extension)) {
-                        $iconName = $icons.Types.$type[$FileInfo.Extension]
-                    } else {
-                        # File probably has multiple extensions
-                        # Fallback to computing the full extension
-                        $firstDot = $FileInfo.Name.IndexOf('.')
-                        if ($firstDot -ne -1) {
-                            $fullExtension = $FileInfo.Name.Substring($firstDot)
-                            $iconName = $icons.Types.$type[$fullExtension]
-                        }
-                    }
-                    if (-not $iconName) {
-                        $iconName = $icons.Types.$type['']
-                    }
-
-                    # Fallback if everything has gone horribly wrong
+                if ($icons) {
+                    # Determine normal directory icon and color
+                    $iconName = $icons.Types.$type.WellKnown[$FileInfo.Name]
                     if (-not $iconName) {
                         if ($FileInfo.PSIsContainer) {
-                            $iconName = 'nf-oct-file_directory'
+                            $iconName = $icons.Types.$type[$FileInfo.Name]
+                        } elseif ($icons.Types.$type.ContainsKey($FileInfo.Extension)) {
+                            $iconName = $icons.Types.$type[$FileInfo.Extension]
                         } else {
-                            $iconName = 'nf-fa-file'
+                            # File probably has multiple extensions
+                            # Fallback to computing the full extension
+                            $firstDot = $FileInfo.Name.IndexOf('.')
+                            if ($firstDot -ne -1) {
+                                $fullExtension = $FileInfo.Name.Substring($firstDot)
+                                $iconName = $icons.Types.$type[$fullExtension]
+                            }
                         }
-                    }
-                }
-                $colorSeq = $colors.Types.$type.WellKnown[$FileInfo.Name]
-                if (-not $colorSeq) {
-                    if ($FileInfo.PSIsContainer) {
-                        $colorSeq = $colors.Types.$type[$FileInfo.Name]
-                    } elseif ($colors.Types.$type.ContainsKey($FileInfo.Extension)) {
-                        $colorSeq = $colors.Types.$type[$FileInfo.Extension]
-                    } else {
-                        # File probably has multiple extensions
-                        # Fallback to computing the full extension
-                        $firstDot = $FileInfo.Name.IndexOf('.')
-                        if ($firstDot -ne -1) {
-                            $fullExtension = $FileInfo.Name.Substring($firstDot)
-                            $colorSeq = $colors.Types.$type[$fullExtension]
+                        if (-not $iconName) {
+                            $iconName = $icons.Types.$type['']
                         }
-                    }
-                    if (-not $colorSeq) {
-                        $colorSeq = $colors.Types.$type['']
-                    }
 
-                    # Fallback if everything has gone horribly wrong
-                    if (-not $colorSeq) {
-                        $colorSeq = $script:colorReset
+                        # Fallback if everything has gone horribly wrong
+                        if (-not $iconName) {
+                            if ($FileInfo.PSIsContainer) {
+                                $iconName = 'nf-oct-file_directory'
+                            } else {
+                                $iconName = 'nf-fa-file'
+                            }
+                        }
                     }
+                } else {
+                    $iconName = $null
+                }
+                if ($colors) {
+                    $colorSeq = $colors.Types.$type.WellKnown[$FileInfo.Name]
+                    if (-not $colorSeq) {
+                        if ($FileInfo.PSIsContainer) {
+                            $colorSeq = $colors.Types.$type[$FileInfo.Name]
+                        } elseif ($colors.Types.$type.ContainsKey($FileInfo.Extension)) {
+                            $colorSeq = $colors.Types.$type[$FileInfo.Extension]
+                        } else {
+                            # File probably has multiple extensions
+                            # Fallback to computing the full extension
+                            $firstDot = $FileInfo.Name.IndexOf('.')
+                            if ($firstDot -ne -1) {
+                                $fullExtension = $FileInfo.Name.Substring($firstDot)
+                                $colorSeq = $colors.Types.$type[$fullExtension]
+                            }
+                        }
+                        if (-not $colorSeq) {
+                            $colorSeq = $colors.Types.$type['']
+                        }
+
+                        # Fallback if everything has gone horribly wrong
+                        if (-not $colorSeq) {
+                            $colorSeq = $script:colorReset
+                        }
+                    }
+                } else {
+                    $colorSeq = $script:colorReset
                 }
             }
         }
-        $displayInfo['Icon']  = $glyphs[$iconName]
+        if ($iconName) {
+            $displayInfo['Icon'] = $glyphs[$iconName]
+        } else {
+            $displayInfo['Icon'] = $null
+        }
         $displayInfo['Color'] = $colorSeq
         $displayInfo
     }
@@ -398,6 +448,8 @@ function Set-Theme {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowNull()]
+        [AllowEmptyString()]
         [string]$Name,
 
         [ValidateSet('Color', 'Icon')]
@@ -405,13 +457,19 @@ function Set-Theme {
         [string]$Type
     )
 
-    if (-not $script:userThemeData.Themes.$Type.ContainsKey($Name)) {
-        Write-Error "$Type theme [$Name] not found."
-    } else {
-        $script:userThemeData."Current$($Type)Theme" = $Name
-        $script:prefs."Current$($Type)Theme" = $Name
-        Save-Theme -Theme $userThemeData.Themes.$Type[$Name] -Type $type
+    if ([string]::IsNullOrEmpty($Name)) {
+        $script:userThemeData."Current$($Type)Theme" = $null
+        $script:prefs."Current$($Type)Theme" = ''
         Save-Preferences $script:prefs
+    } else {
+        if (-not $script:userThemeData.Themes.$Type.ContainsKey($Name)) {
+            Write-Error "$Type theme [$Name] not found."
+        } else {
+            $script:userThemeData."Current$($Type)Theme" = $Name
+            $script:prefs."Current$($Type)Theme" = $Name
+            Save-Theme -Theme $userThemeData.Themes.$Type[$Name] -Type $type
+            Save-Preferences $script:prefs
+        }
     }
 }
 function Add-TerminalIconsColorTheme {
@@ -544,7 +602,6 @@ function Add-TerminalIconsIconTheme {
         Add-Theme @PSBoundParameters -Type Icon
     }
 }
-
 function Format-TerminalIcons {
     <#
     .SYNOPSIS
@@ -580,7 +637,11 @@ function Format-TerminalIcons {
 
     process {
         $displayInfo = Resolve-Icon $FileInfo
-        "$($displayInfo.Color)$($displayInfo.Icon)  $($FileInfo.Name)$($displayInfo.Target)$($script:colorReset)"
+        if ($displayInfo.Icon) {
+            "$($displayInfo.Color)$($displayInfo.Icon)  $($FileInfo.Name)$($displayInfo.Target)$($script:colorReset)"
+        } else {
+            "$($displayInfo.Color)$($FileInfo.Name)$($displayInfo.Target)$($script:colorReset)"
+        }
     }
 }
 function Get-TerminalIconsColorTheme {
@@ -680,10 +741,22 @@ function Get-TerminalIconsTheme {
     [CmdletBinding()]
     param()
 
+    $iconTheme = if ($script:userThemeData.CurrentIconTheme) {
+        [pscustomobject]$script:userThemeData.Themes.Icon[$script:userThemeData.CurrentIconTheme]
+    } else {
+        $null
+    }
+
+    $colorTheme = if ($script:userThemeData.CurrentColorTheme) {
+        [pscustomobject]$script:userThemeData.Themes.Color[$script:userThemeData.CurrentColorTheme]
+    } else {
+        $null
+    }
+
     [pscustomobject]@{
         PSTypeName = 'TerminalIconsTheme'
-        Color      = [pscustomobject]$script:userThemeData.Themes.Color[$script:userThemeData.CurrentColorTheme]
-        Icon       = [pscustomobject]$script:userThemeData.Themes.Icon[$script:userThemeData.CurrentIconTheme]
+        Color      = $colorTheme
+        Icon       = $iconTheme
     }
 }
 function Remove-TerminalIconsTheme {
@@ -781,46 +854,6 @@ function Remove-TerminalIconsTheme {
         } else {
             Write-Error ("Icon theme [{0}] is active. Please select another theme before removing this it." -f $IconTheme)
         }
-    }
-}
-function Set-TerminalIconsColorTheme {
-    <#
-    .SYNOPSIS
-        Set the Terminal-Icons color theme.
-    .DESCRIPTION
-        Set the Terminal-Icons color theme to a registered theme.
-    .PARAMETER Name
-        The name of a registered color theme.
-    .EXAMPLE
-        PS> Set-TerminalIconsColorTheme -Name devblackops
-
-        Set the color theme to 'devblackops'.
-    .INPUTS
-        System.String
-
-        The name of a registered color theme.
-    .OUTPUTS
-        None.
-    .LINK
-        Set-TerminalIconsIconTheme
-    .LINK
-        Get-TerminalIconsColorTheme
-    .LINK
-        Get-TerminalIconsIconTheme
-    #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [ArgumentCompleter({
-            (Get-TerminalIconsColorTheme).Keys | Sort-Object
-        })]
-        [string]$Name
-    )
-
-    process {
-        Write-Warning "$($MyInvocation.MyCommand.Name) has been deprecated and will be removed in a later version. Please use [Set-TerminalIconsTheme] to set the theme"
-        Set-Theme -Name $Name -Type Color
     }
 }
 function Set-TerminalIconsIcon {
@@ -957,46 +990,6 @@ function Set-TerminalIconsIcon {
         }
     }
 }
-function Set-TerminalIconsIconTheme {
-    <#
-    .SYNOPSIS
-        Set the Terminal-Icons icon theme.
-    .DESCRIPTION
-        Set the Terminal-Icons icon theme to a registered theme.
-    .PARAMETER Name
-        The name of a registered icon theme.
-    .EXAMPLE
-        PS> Set-TerminalIconsIconTheme -Name devblackops
-
-        Set the icon theme to 'devblackops'.
-    .INPUTS
-        System.String
-
-        The name of a registered icon theme.
-    .OUTPUTS
-        None.
-    .LINK
-        Set-TerminalIconsColorTheme
-    .LINK
-        Get-TerminalIconsColorTheme
-    .LINK
-        Get-TerminalIconsIconTheme
-    #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [ArgumentCompleter({
-            (Get-TerminalIconsIconTheme).Keys | Sort-Object
-        })]
-        [string]$Name
-    )
-
-    process {
-        Write-Warning "$($MyInvocation.MyCommand.Name) has been deprecated and will be removed in a later version. Please use [Set-TerminalIconsTheme] to set the theme"
-        Set-Theme -Name $Name -Type Icon
-    }
-}
 function Set-TerminalIconsTheme {
     <#
     .SYNOPSIS
@@ -1007,6 +1000,10 @@ function Set-TerminalIconsTheme {
         The name of a registered color theme to use.
     .PARAMETER IconTheme
         The name of a registered icon theme to use.
+    .PARAMETER DisableColorTheme
+        Disables custom colors and uses default terminal color.
+    .PARAMETER DisableIconTheme
+        Disables custom icons and shows only shows the directory or file name.
     .PARAMETER Force
         Bypass confirmation messages.
     .EXAMPLE
@@ -1017,6 +1014,14 @@ function Set-TerminalIconsTheme {
         PS> Set-TerminalIconsTheme -IconTheme devblackops
 
         Set the icon theme to 'devblackops'.
+    .EXAMPLE
+        PS> Set-TerminalIconsTheme -DisableIconTheme
+
+        Disable Terminal-Icons custom icons and only show custom colors.
+    .EXAMPLE
+        PS> Set-TerminalIconsTheme -DisableColorTheme
+
+        Disable Terminal-Icons custom colors and only show custom icons.
     .INPUTS
         System.String
 
@@ -1032,20 +1037,36 @@ function Set-TerminalIconsTheme {
     .NOTES
         This function supercedes Set-TerminalIconsColorTheme and Set-TerminalIconsIconTheme. They have been deprecated.
     #>
-    [cmdletbinding(SupportsShouldProcess)]
+    [cmdletbinding(SupportsShouldProcess, DefaultParameterSetName = 'theme')]
     param(
+        [Parameter(ParameterSetName = 'theme')]
         [ArgumentCompleter({
             (Get-TerminalIconsIconTheme).Keys | Sort-Object
         })]
         [string]$IconTheme,
 
+        [Parameter(ParameterSetName = 'theme')]
         [ArgumentCompleter({
             (Get-TerminalIconsColorTheme).Keys | Sort-Object
         })]
         [string]$ColorTheme,
 
+        [Parameter(ParameterSetName = 'notheme')]
+        [switch]$DisableColorTheme,
+
+        [Parameter(ParameterSetName = 'notheme')]
+        [switch]$DisableIconTheme,
+
         [switch]$Force
     )
+
+    if ($DisableIconTheme.IsPresent) {
+        Set-Theme -Name $null -Type Icon
+    }
+
+    if ($DisableColorTheme.IsPresent) {
+        Set-Theme -Name $null -Type Color
+    }
 
     if ($ColorTheme) {
         if ($Force -or $PSCmdlet.ShouldProcess($ColorTheme, 'Set color theme')) {
@@ -1095,20 +1116,27 @@ function Show-TerminalIconsTheme {
 
     $theme = Get-TerminalIconsTheme
 
+    # Use the default theme if the icon theme has been disabled
+    if ($theme.Icon) {
+        $themeName = $theme.Icon.Name
+    } else {
+        $themeName = $script:defaultTheme
+    }
+
     $directories = @(
         [IO.DirectoryInfo]::new('ExampleFolder')
-        $script:userThemeData.Themes.Icon[$theme.Icon.Name].Types.Directories.WellKnown.Keys.ForEach({
+        $script:userThemeData.Themes.Icon[$themeName].Types.Directories.WellKnown.Keys.ForEach({
             [IO.DirectoryInfo]::new($_)
         })
     )
     $wellKnownFiles = @(
         [IO.FileInfo]::new('ExampleFile')
-        $script:userThemeData.Themes.Icon[$theme.Icon.Name].Types.Files.WellKnown.Keys.ForEach({
+        $script:userThemeData.Themes.Icon[$themeName].Types.Files.WellKnown.Keys.ForEach({
             [IO.FileInfo]::new($_)
         })
     )
 
-    $extensions = $script:userThemeData.Themes.Icon[$theme.Icon.Name].Types.Files.Keys.Where({$_ -ne 'WellKnown'}).ForEach({
+    $extensions = $script:userThemeData.Themes.Icon[$themeName].Types.Files.Keys.Where({$_ -ne 'WellKnown'}).ForEach({
         [IO.FileInfo]::new("example$_")
     })
 

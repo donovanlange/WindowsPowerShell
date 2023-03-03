@@ -29,6 +29,9 @@
                 projects                = '00FF7F'
                 bin                     = '00FFF7'
                 tests                   = '87CEEB'
+                windows                 = '00A8E8'
+                users                   = 'F4F4F4'
+                favorites               = 'F7D72C'
                 '.config'               = '87CEAF'
                 '.cache'                = '87ECAF'
                 '.vscode'               = '87CEFA'
@@ -142,6 +145,9 @@
 
                 # Terraform
                 '.terraform.lock.hcl'           = '948EEC'
+
+                # Gradle
+                'gradlew'                       = '39D52D'
             }
             # Archive files
             '.7z'                   = 'DAA520'
@@ -165,6 +171,15 @@
 
             '.sh'                   = 'FF4500'
 
+            # App Packages
+            '.msi'                  = 'FFC77A'
+            '.msix'                 = 'FFC77A'
+            '.msixbundle'           = 'FFC77A'
+            '.appx'                 = 'FFC77A'
+            '.AppxBundle'           = 'FFC77A'
+            '.deb'                  = 'FFC77A'
+            '.rpm'                  = 'FFC77A'
+
             # PowerShell
             '.ps1'                  = '00BFFF'
             '.psm1'                 = '00BFFF'
@@ -180,9 +195,14 @@
 
             # Java
             '.java'                 = 'F89820'
+            '.jar'                  = 'F89820'
+
+            '.gradle'               = '39D52D'
 
             # Python
             '.py'                   = '4B8BBE'
+            '.ipynb'                = '4B8BBE'
+
 
             # React
             '.jsx'                  = '20B2AA'
@@ -271,6 +291,11 @@
             '.log'                  = 'F0E68C'
             '.txt'                  = '00CED1'
 
+            # Subtitle files
+            '.srt'                  = '00CED1'
+            '.lrc'                  = '00CED1'
+            '.ass'                  = 'C50000'
+
             # HTML/css
             '.html'                 = 'CD5C5C'
             '.htm'                  = 'CD5C5C'
@@ -279,12 +304,16 @@
             '.asp'                  = 'CD5C5C'
             '.css'                  = '87CEFA'
             '.sass'                 = 'FF00FF'
+            '.scss'                 = 'FF00FF'
             '.less'                 = '6B8E23'
 
             # Markdown
             '.md'                   = '00BFFF'
             '.markdown'             = '00BFFF'
             '.rst'                  = '00BFFF'
+
+            # Handlebars
+            '.hbs'                  = 'E37933'
 
             # JSON
             '.json'                 = 'FFD700'
@@ -371,6 +400,9 @@
             '.m4a'                  = 'DB7093'
             '.wma'                  = 'DB7093'
             '.aiff'                 = 'DB7093'
+            '.wav'                  = 'DB7093'
+            '.aac'                  = 'DB7093'
+            '.opus'                 = 'DB7093'
 
             # Images
             '.png'                  = '20B2AA'
@@ -394,7 +426,6 @@
             '.exr'                  = '20B2AA'
             '.fpx'                  = '20B2AA'
             '.gbr'                  = '20B2AA'
-            '.img'                  = '20B2AA'
             '.jbig2'                = '20B2AA'
             '.jb2'                  = '20B2AA'
             '.jng'                  = '20B2AA'
@@ -495,6 +526,24 @@
             '.tf'                   = '948EEC'
             '.tfvars'               = '948EEC'
             '.auto.tfvars'          = '948EEC'
+
+            # Disk Image
+            '.vmdk'                 = 'E1E3E6'
+            '.vhd'                  = 'E1E3E6'
+            '.vhdx'                 = 'E1E3E6'
+            '.img'                  = 'E1E3E6'
+            '.iso'                  = 'E1E3E6'
+
+            # R language
+            '.R'                    = '276DC3'
+            '.Rmd'                  = '276DC3'
+            '.Rproj'                = '276DC3'
+
+            # Julia language
+            '.jl'                   = '9259a3'
+
+            # Vim
+            '.vim'                  = '019833'
         }
     }
 }

@@ -1,6 +1,6 @@
 @{
     RootModule        = 'Terminal-Icons.psm1'
-    ModuleVersion     = '0.5.2'
+    ModuleVersion     = '0.10.0'
     GUID              = '4419ddb6-3528-47cd-baf3-7fb9d8566620'
     Author            = 'Brandon Olin'
     CompanyName       = 'Community'
@@ -10,7 +10,7 @@
     # PowerShellHostName = ''
     # PowerShellHostVersion = ''
     RequiredModules = @()
-    FunctionsToExport = @('Add-TerminalIconsColorTheme','Add-TerminalIconsIconTheme','Format-TerminalIcons','Get-TerminalIconsColorTheme','Get-TerminalIconsGlyphs','Get-TerminalIconsIconTheme','Get-TerminalIconsTheme','Remove-TerminalIconsTheme','Set-TerminalIconsColorTheme','Set-TerminalIconsIcon','Set-TerminalIconsIconTheme','Set-TerminalIconsTheme','Show-TerminalIconsTheme')
+    FunctionsToExport = @('Add-TerminalIconsColorTheme','Add-TerminalIconsIconTheme','Format-TerminalIcons','Get-TerminalIconsColorTheme','Get-TerminalIconsGlyphs','Get-TerminalIconsIconTheme','Get-TerminalIconsTheme','Remove-TerminalIconsTheme','Set-TerminalIconsIcon','Set-TerminalIconsTheme','Show-TerminalIconsTheme')
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()
@@ -24,4 +24,3 @@
         }
     }
 }
-
