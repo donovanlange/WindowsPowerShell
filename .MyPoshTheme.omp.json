@@ -33,6 +33,7 @@
             "display_status": true,
             "display_stash_count": true,
             "display_upstream_icon": true,
+            "exclude_folders": ["C:\\\\substrate\\\\*", "C:\\\\xap_ss"],
             "local_changes_color": "#C678DD",
             "working_color": "#FF6471",
             "staging_color": "#95ffa4",
@@ -40,6 +41,25 @@
             "behind_color": "#8A4FFF"
           }
         },
+        {
+          "type": "git",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "#193549",
+          "background": "#9A348E",
+          "properties": {
+            "display_status": false,
+            "display_stash_count": true,
+            "display_upstream_icon": true,
+            "include_folders": ["C:\\\\substrate\\\\*", "C:\\\\xap_ss"],
+            "local_changes_color": "#C678DD",
+            "working_color": "#FF6471",
+            "staging_color": "#95ffa4",
+            "ahead_color": "#2EC4B6",
+            "behind_color": "#8A4FFF"
+          }
+        },
+
         {
           "type": "python",
           "style": "diamond",
